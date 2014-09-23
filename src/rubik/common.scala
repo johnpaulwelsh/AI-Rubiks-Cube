@@ -3,98 +3,71 @@ package rubik
 /**
  * Common utility functions that may be used at any time.
  * Must be imported into each file that wants to use them.
+ * 
+ * @author: John Paul Welsh
  */
 object common {
-  type Face = Array[Char]
-  type Cube = Array[Face]
+  type Cubie = Array[Char]
+  type Cube = Array[Cubie]
 
   /**
-   * Transforms a cross-shaped input into a face-divided cube.
+   * Transforms a cross-shaped input into a cubie-divided cube.
    */
   def arrangeInput(ls: Array[String]): Cube = {
+    var cube = Array.ofDim[Cubie](20)    
     
-    def fillSpots(ls2: Cube): Cube = {
-      // Red
-      ls2(0)(0) = ls(0).charAt(0)
-      ls2(0)(1) = ls(0).charAt(1)
-      ls2(0)(2) = ls(0).charAt(2)
-      ls2(0)(3) = ls(1).charAt(0)
-      ls2(0)(4) = ls(1).charAt(1)
-      ls2(0)(5) = ls(1).charAt(2)
-      ls2(0)(6) = ls(2).charAt(0)
-      ls2(0)(7) = ls(2).charAt(1)
-      ls2(0)(8) = ls(2).charAt(2)
-      // Green
-      ls2(1)(0) = ls(3).charAt(0)
-      ls2(1)(1) = ls(3).charAt(1)
-      ls2(1)(2) = ls(3).charAt(2)
-      ls2(1)(3) = ls(4).charAt(0)
-      ls2(1)(4) = ls(4).charAt(1)
-      ls2(1)(5) = ls(4).charAt(2)
-      ls2(1)(6) = ls(5).charAt(0)
-      ls2(1)(7) = ls(5).charAt(1)
-      ls2(1)(8) = ls(5).charAt(2)
-      // Yellow
-      ls2(2)(0) = ls(3).charAt(3)
-      ls2(2)(1) = ls(3).charAt(4)
-      ls2(2)(2) = ls(3).charAt(5)
-      ls2(2)(3) = ls(4).charAt(3)
-      ls2(2)(4) = ls(4).charAt(4)
-      ls2(2)(5) = ls(4).charAt(5)
-      ls2(2)(6) = ls(5).charAt(3)
-      ls2(2)(7) = ls(5).charAt(4)
-      ls2(2)(8) = ls(5).charAt(5)
-      // Blue
-      ls2(3)(0) = ls(3).charAt(6)
-      ls2(3)(1) = ls(3).charAt(7)
-      ls2(3)(2) = ls(3).charAt(8)
-      ls2(3)(3) = ls(4).charAt(6)
-      ls2(3)(4) = ls(4).charAt(7)
-      ls2(3)(5) = ls(4).charAt(8)
-      ls2(3)(6) = ls(5).charAt(6)
-      ls2(3)(7) = ls(5).charAt(7)
-      ls2(3)(8) = ls(5).charAt(8)
-      // Orange
-      ls2(4)(0) = ls(6).charAt(0)
-      ls2(4)(1) = ls(6).charAt(1)
-      ls2(4)(2) = ls(6).charAt(2)
-      ls2(4)(3) = ls(7).charAt(0)
-      ls2(4)(4) = ls(7).charAt(1)
-      ls2(4)(5) = ls(7).charAt(2)
-      ls2(4)(6) = ls(8).charAt(0)
-      ls2(4)(7) = ls(8).charAt(1)
-      ls2(4)(8) = ls(8).charAt(2)
-      // White
-      ls2(5)(0) = ls(9).charAt(0)
-      ls2(5)(1) = ls(9).charAt(1)
-      ls2(5)(2) = ls(9).charAt(2)
-      ls2(5)(3) = ls(10).charAt(0)
-      ls2(5)(4) = ls(10).charAt(1)
-      ls2(5)(5) = ls(10).charAt(2)
-      ls2(5)(6) = ls(11).charAt(0)
-      ls2(5)(7) = ls(11).charAt(1)
-      ls2(5)(8) = ls(11).charAt(2)
-      
-      ls2
-    }
-
-    var cube = Array.ofDim[Face](6)
-
-    // put a face into each 
-    for (i <- 0 to 5) { cube(i) = new Face(9) }
+    // do shit here
     
-    fillSpots(cube)
+    cube
   }
   
   /**
-   * Prints the arranged cube in a face-divided and readable way.
+   * Fills a cube instance to represent the solved state.
+   * 
+   * The first element of a cubie is always the color resting on the x-axis,
+   * and the second and third rest on the y- and z-axes, respectively.
+   * If the cubie does not have a clor on a certain axis, that spot is filled
+   * with a lowercase 'x'.
    */
-  def printCube(cube: Cube): Unit = {
-    for (face <- cube) {
-      for (elem <- face) {
-        print(elem)
-      }
-      println()
-    }
+  def setSolvedCube(): Cube = {
+    var solvedCube = Array.ofDim[Cubie](20)
+
+    // Corner cubies
+    //                      x-   y-   z- axes
+    solvedCube(0)  = Array('G', 'R', 'W')
+    solvedCube(2)  = Array('B', 'R', 'W')
+    solvedCube(5)  = Array('G', 'R', 'Y')
+    solvedCube(7)  = Array('B', 'R', 'Y')
+    
+    solvedCube(12) = Array('G', 'O', 'W')
+    solvedCube(14) = Array('B', 'O', 'W')
+    solvedCube(17) = Array('G', 'O', 'Y')
+    solvedCube(19) = Array('B', 'O', 'Y')
+    
+    // Side cubies
+    solvedCube(1)  = Array('x', 'R', 'W')
+    solvedCube(3)  = Array('G', 'R', 'x')
+    solvedCube(4)  = Array('B', 'R', 'x')
+    solvedCube(6)  = Array('x', 'R', 'Y')
+    
+    solvedCube(8)  = Array('G', 'x', 'W')
+    solvedCube(9)  = Array('B', 'x', 'W')
+    solvedCube(10) = Array('G', 'x', 'Y')
+    solvedCube(11) = Array('B', 'x', 'Y')
+    
+    solvedCube(13) = Array('x', 'O', 'W')
+    solvedCube(15) = Array('G', 'O', 'x')
+    solvedCube(16) = Array('B', 'O', 'x')
+    solvedCube(18) = Array('x', 'O', 'Y')
+    
+    // Return back the finished Cube
+    solvedCube
+  }
+  
+  /**
+   * Prints the given Cube in a readable way.
+   */
+  def printCube(cube: Cube) {
+    println("Not even close baby")
   }
 }

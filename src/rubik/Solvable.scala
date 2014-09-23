@@ -5,6 +5,7 @@ import common._
 
 /**
  * Starting point for the Rubik's Cube AI.
+ * 
  * @author: John Paul Welsh
  */
 object run {
@@ -12,13 +13,17 @@ object run {
   /**
    * File reading taken from http://alvinalexander.com/scala/scala-how-open-read-files-scala-examples
    */
-  def main(args: Array[String]): Unit = {
-    // ../../initial.txt
+  def main(args: Array[String]) {
+    // Current path to the file is ../../initial.txt
     val filename = args(0)
-    val filelines = io.Source.fromFile(filename).getLines.toArray
+    // Read in the text file, make it a List out of the lines of the file, trim each line, and make it an Array
+    val filelines: Array[String] = io.Source.fromFile(filename).getLines.map(x => x.trim()).toArray
+    // Put the input characters into a Cube
     var cube = arrangeInput(filelines)
-    val cubeValidator = new CubeValidator
-    printCube(cube)
-    println(cubeValidator.isValidCube(cube))
+    // Set up a prototype of a Cube in its solved state
+    var solvedCube = setSolvedCube
+    
+    val cv = new CubeValidator
+    println(cv.isValidCenters(filelines))
   }
 }
