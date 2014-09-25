@@ -1,12 +1,11 @@
 package rubik
 
 import scala.io.Source
-import common._
 
 /**
  * Starting point for the Rubik's Cube AI.
  * 
- * @author: John Paul Welsh
+ * @author  John Paul Welsh
  */
 object run {
 
@@ -19,11 +18,10 @@ object run {
     // Read in the text file, make it a List out of the lines of the file, trim each line, and make it an Array
     val filelines: Array[String] = io.Source.fromFile(filename).getLines.map(x => x.trim()).toArray
     // Put the input characters into a Cube
-    var cube = arrangeInput(filelines)
+    var cube = common.arrangeInput(filelines)
     // Set up a prototype of a Cube in its solved state
-    var solvedCube = setSolvedCube
+    var solvedCube = common.setSolvedCube
     
-    val cv = new CubeValidator
-    println(cv.isValidCenters(filelines))
+    println("Valid cube? " + CubeValidator.isValidCube(filelines, cube, solvedCube))
   }
 }
