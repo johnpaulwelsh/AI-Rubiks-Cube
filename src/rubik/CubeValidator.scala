@@ -9,15 +9,16 @@ import common._
  */
 object CubeValidator {
 
-//  def hasValidNumOfColors(ls: Array[String]): Boolean = {
-//    var flag = true
-//    for (i <- List("R", "Y", "G", "B", "O", "W")) {
-//      val x = ls.flatten
-//      println(ls.count(_.split("").contains(i)))
-//      flag = ls.count(_.split("").contains(i)) == 9
-//    }
-//    flag
-//  }
+  def hasValidNumOfColors(ls: Array[String]): Boolean = {
+    
+    def recurse(flatArray: Array[Char], centerList: List[Char]): Boolean = {
+      if (centerList.isEmpty) true
+      else if (flatArray.count(_ == centerList.head) != 9) false
+      else recurse(flatArray, centerList.tail)
+    }
+    
+    recurse(ls.flatten, List('R', 'G', 'Y', 'B', 'O', 'W'))
+  }
   
   /**
    * The primary function to check the three parity checks against the input.

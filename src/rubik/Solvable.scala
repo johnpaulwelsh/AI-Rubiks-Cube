@@ -22,6 +22,7 @@ object run {
     // Set up a prototype of a Cube in its solved state
     var solvedCube = common.setSolvedCube
     
+    println("Valid color counts? " + CubeValidator.hasValidNumOfColors(filelines))
     println("Valid cube? " + CubeValidator.isValidCube(filelines, cube, solvedCube))
   }
 }
