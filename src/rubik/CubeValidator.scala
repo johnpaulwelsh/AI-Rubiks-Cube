@@ -72,6 +72,16 @@ object CubeValidator {
     }
     
     /**
+     * Determines whether two cubies match, based solely on contents and not order.
+     * Used in permutation test and side test.
+     */
+    def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
+      if (solved.isEmpty) true
+      else if (!(input.deep.contains(solved.head))) false
+      else matchingCubies(input, solved.tail)
+    }
+    
+    /**
      * Maps the location that a cubie is (in seqNow) to the location
      * it ought to be (gotten from seqSolved).
      * 
@@ -82,12 +92,6 @@ object CubeValidator {
      * @return  the accumulated array of position indicies
      */
     def getCubieIndices(seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
-      
-      def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
-        if (solved.isEmpty) true
-        else if (!(input.deep.contains(solved.head))) false
-        else matchingCubies(input, solved.tail)
-      }
       
       for (i <- 0 until seqSolved.length) {
         for (j <- 0 until seqNow.length) {
@@ -126,7 +130,7 @@ object CubeValidator {
     }
     
     /**
-     * Gets the parity of a Cubie.
+     * Gets the parity of a corner Cubie.
      * 
      * We only care about where the up-down color is (which axis it's currently on).
      * If it's up or down, we're good so give it a 0. If it isn't, how many clockwise 120-degree turns
@@ -172,31 +176,64 @@ object CubeValidator {
       var totalCornerParity = 0
         
       for (inCubie <- inputCorners) {
-        var orientationList: Array[Cubie] = Array()
-                
         val isLeftSideCubie = (inputCorners.indexOf(inCubie) == 0 ||
                                inputCorners.indexOf(inCubie) == 2 ||
                                inputCorners.indexOf(inCubie) == 4 ||
                                inputCorners.indexOf(inCubie) == 6)
-                               
+        
         val isOnFrontOfCube = (inputCorners.indexOf(inCubie) == 2 ||
                                inputCorners.indexOf(inCubie) == 3 ||
                                inputCorners.indexOf(inCubie) == 6 ||
                                inputCorners.indexOf(inCubie) == 7)
-                               
+        
         val isOnTopOfCube   = (inputCorners.indexOf(inCubie) >= 0 &&
                                inputCorners.indexOf(inCubie) <= 3)
                 
         totalCornerParity += getCornerParity(inCubie, isLeftSideCubie, isOnFrontOfCube, isOnTopOfCube)
-      } // end outer 'for' loop
+      }
       
       // Returns whether the total parity is divisible by 3
       totalCornerParity % 3 == 0
     }
     
-    // I DONT KNOW WHAT THIS NEEDS TO DO
-    def getSideOrientations(side: Cubie): Array[Cubie] = {
-      null
+    /**
+     * Gets the parity of a side Cubie.
+     * 
+     * The 5 rules that this test follows are listed in comments inside this function.
+     * 
+     * @param cubie  the input Cubie
+     * @param idx    the index of the input Cubie in the list of all side Cubies
+     * @return  the parity value for the Cubie
+     */
+    def getSideParity(c: Cubie, idx: Int): Int = {
+      // Rule 1: if the y-axis is R or O, we're good. All we need to do to get the Cubie in its right position
+      //         (so also taking into account the other color on the Cubie) is spin the top or bottom face. Since
+      //         it only takes spins on L, R, U, or D (here, only on U or D), then the parity is 0.
+      if      (c(1) == 'R' || c(1) == 'O') 0
+      
+      // Rule 2: if the the x- or z-axis is R or O, we're bad. You can't get it home without using an F or B move.
+      else if (c(0) == 'R' || c(0) == 'O') 1
+      else if (c(2) == 'R' || c(2) == 'O') 1
+      
+      // Rule 3a: it is bad if it has Y or W facing the sides. They require at least one F or B to fix.
+      // Rule 3b: it is good if it has B or G facing the sides.
+      else if (c(0) == 'Y' || c(0) == 'W') 1
+      else if (c(0) == 'B' || c(0) == 'G') 0
+      
+      // Only for cubies in the middle layer (the ones with nothing on the y-axis)
+      else if (c(1) == 'x') {
+        // Rule 4a: if it has R or O facing front or back, then we're good.
+        // Rule 4b: if it has R or O facing left or right, then we're bad.
+        if      (c(2) == 'R' || c(2) == 'O') 0
+        else if (c(0) == 'R' || c(0) == 'O') 1
+        
+        // Rule 5a: if it has W or Y facing front or back, then we're good.
+        // Rule 5b: if it has B or G facing left or right, then we're bad.
+        else if (c(2) == 'W' || c(2) == 'Y') 0
+        else if (c(0) == 'B' || c(0) == 'G') 1
+        else -1
+      }
+      else -1
     }
     
     /**
@@ -205,16 +242,26 @@ object CubeValidator {
      * @return  true if passed the test, false otherwise
      */
     def isValidSideOrientationParity(): Boolean = {      
-      true
+      val inputSides = getCubeSideList(input)
+      val solvedSides = getCubeSideList(solved)
+      var totalSideParity = 0
+      
+      for (inCubie <- inputSides) {
+        for (solCubie <- solvedSides) {
+          if (matchingCubies(inCubie, solCubie)) totalSideParity += getSideParity(inCubie, solvedSides.indexOf(inCubie))
+        }
+      }
+      totalSideParity % 2 == 0
     }
     
     // Returns true when all tests pass, false if one or more fails
-    println("Valid # of colors: " + hasValidNumOfColors)
-    println("Valid centers: " + hasValidCenters)
-    println("Permutation test: " + isValidPermutationParity)
-    println("Corner parity test: " + isValidCornerOrientationParity)
-    isValidPermutationParity &&
-    isValidCornerOrientationParity
-    //isValidSideOrientationParity
+    if (!isValidPermutationParity) println("Permutation test failed")
+    if (!isValidCornerOrientationParity) println("Corner test failed")
+    if (!isValidSideOrientationParity) println("Side test failed")
+    hasValidNumOfColors &&
+      hasValidCenters &&
+      isValidPermutationParity &&
+      isValidCornerOrientationParity &&
+      isValidSideOrientationParity
   }
 }
