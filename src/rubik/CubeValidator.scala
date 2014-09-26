@@ -20,12 +20,12 @@ object CubeValidator {
   def isValidCube(filelines: Array[String], input: Cube, solved: Cube): Boolean = {
     
     /**
-     * Test 1 of 4: center cubes.
+     * Test 1 of 5: center cubes.
      * 
      * @param ls  the original input from the text file, representing a cube state
      * @return  true if the centers are right, false otherwise
      */
-    def isValidCenters(): Boolean = {
+    def hasValidCenters(): Boolean = {
       val centerList: List[Char] = List(filelines(1).charAt(1)) :::
                                    List(filelines(4).charAt(1)) :::
                                    List(filelines(4).charAt(4)) :::
@@ -36,8 +36,7 @@ object CubeValidator {
     }
     
     /**
-     * Determines whether the input file contains exactly 9 of the 6 valid colors of a Rubik's Cube
-     * (R for red, Y for yellow, G for green, B for blue, O for orange, and W for white).
+     * Test 2 of 5: number of each color.
      * 
      * @param input  the input file as an array of strings (each entry is one row of the file)
      * @return  true if every character in the input is one of those 6, and there are only 9 of each,
@@ -101,7 +100,7 @@ object CubeValidator {
     }
     
     /**
-     * Test 2 of 4: permutation parity.
+     * Test 3 of 5: permutation parity.
      * 
      * @return  true if passed the test, false otherwise
      */
@@ -127,34 +126,43 @@ object CubeValidator {
     }
     
     /**
-     * Determines the valid orientations of the given corner Cubie.
+     * Gets the parity of a Cubie.
      * 
-     * @param corner  the Cubie element that we want the orientations for
-     * @return  an array of all legal orientations of the Cubie
-     *          (original, clockwise turn, anticlockwise turn)
+     * We only care about where the up-down color is (which axis it's currently on).
+     * If it's up or down, we're good so give it a 0. If it isn't, how many clockwise 120-degree turns
+     * does it take to fix it back to solved? Try again with a shifted Cubie and an incremented parity.
+     * The shift direction is determined by complicated booleans that would be easier if I just sent in
+     * the Cubie's index, but oh well.
+     * 
+     * @param corner      the input Cubie
+     * @param isLeftSide  whether this Cubie is on the left side of the Cube (when yellow faces toward me and red faces up)
+     * @param isOnFront   whether this Cubie is on the front side of the Cube
+     * @param isTop       whether this Cubie is on the top side of the Cube
+     * @return  the parity value for the Cubie
      */
-    def getCornerOrientations(corner: Cubie): Array[Cubie] = {
-      var orients: Array[Cubie] = Array.ofDim(3)
+    def getCornerParity(corner: Cubie, isLeftSide: Boolean, isOnFront: Boolean, isTop: Boolean): Int = {
+      // This represents one clockwise turn, but is different depending on which side of the Cube
+      // our Cubie is (from a fixed perspective of yellow in front, red on top)
+      def shiftOnLeft(c: Cubie): Cubie  = Array(c(2), c(0), c(1))
+      def shiftOnRight(c: Cubie): Cubie = Array(c(1), c(2), c(0))
       
-      // The first thing you check is whether R or O is on the y-axis. If it is, 'corner' goes in element 0
-      if (corner(1) == 'R' || corner(1) == 'O') orients(0) = corner
-      else {
-        
+      def recurse(corner: Cubie, parity: Int): Int = {
+        if (corner(1) == 'R' || corner(1) == 'O') parity
+        else if (isLeftSide  && isOnFront  && isTop) recurse(shiftOnLeft(corner), parity+1)
+        else if (isLeftSide  && !isOnFront && isTop) recurse(shiftOnRight(corner), parity+1)
+        else if (!isLeftSide && isOnFront  && isTop) recurse(shiftOnRight(corner), parity+1)
+        else if (!isLeftSide && !isOnFront && isTop) recurse(shiftOnLeft(corner), parity+1)
+        else if (isLeftSide  && isOnFront  && !isTop) recurse(shiftOnRight(corner), parity+1)
+        else if (isLeftSide  && !isOnFront && !isTop) recurse(shiftOnLeft(corner), parity+1)
+        else if (!isLeftSide && isOnFront  && !isTop) recurse(shiftOnLeft(corner), parity+1)
+        else if (!isLeftSide && !isOnFront && !isTop) recurse(shiftOnRight(corner), parity+1)
+        else -1
       }
-      
-      orients(0) = Array(corner(0), corner(1), corner(2))
-      orients(1) = Array(corner(2), corner(0), corner(1))
-      orients(2) = Array(corner(1), corner(2), corner(0))
-      orients
+      recurse(corner, 0)
     }
     
-    // THIS IS NEEDED FOR PERMUTATION TEST
-//    def getSideOrientations(side: Cubie): Array[Cubie] = {
-//      kljasdf;lkjsfd
-//    }
-    
     /**
-     * Test 3 of 4: corner parity.
+     * Test 4 of 5: corner parity.
      * 
      * @return  true if passed the test, false otherwise
      */
@@ -162,41 +170,37 @@ object CubeValidator {
       val inputCorners: Array[Cubie]  = getCubeCornerList(input)
       val solvedCorners: Array[Cubie] = getCubeCornerList(solved)
       var totalCornerParity = 0
-      var invalidOrientationFlag = false
         
-      // Loop through list of input Cubies
-      for (cubie <- inputCorners) {
-        // Make new blank orientation list
+      for (inCubie <- inputCorners) {
         var orientationList: Array[Cubie] = Array()
-        // Find the corresponding Cubie in the list from the solved Cube, and get its orientation list
-        println("cubie: " + cubie.deep)
-        for (i <- 0 until solvedCorners.length) {
-          val orients = getCornerOrientations(solvedCorners(i))
-          if (orients.deep.contains(cubie.deep)) orientationList = orients
-        }
-        println(orientationList.deep)
-        // Assign a parity number to the Cubie based on which entry of the orientation list it matches
-        val parityNum = {
-          if      (orientationList.isEmpty)              -1
-          else if (cubie.deep == orientationList(0).deep) 0
-          else if (cubie.deep == orientationList(1).deep) 1
-          else if (cubie.deep == orientationList(2).deep) 2
-//          else if (cubie.deep == orientationList(3).deep) 3
-          else -1
-        }
-        
-        if (parityNum == -1) invalidOrientationFlag = true
-        totalCornerParity += parityNum
-      }
+                
+        val isLeftSideCubie = (inputCorners.indexOf(inCubie) == 0 ||
+                               inputCorners.indexOf(inCubie) == 2 ||
+                               inputCorners.indexOf(inCubie) == 4 ||
+                               inputCorners.indexOf(inCubie) == 6)
+                               
+        val isOnFrontOfCube = (inputCorners.indexOf(inCubie) == 2 ||
+                               inputCorners.indexOf(inCubie) == 3 ||
+                               inputCorners.indexOf(inCubie) == 6 ||
+                               inputCorners.indexOf(inCubie) == 7)
+                               
+        val isOnTopOfCube   = (inputCorners.indexOf(inCubie) >= 0 &&
+                               inputCorners.indexOf(inCubie) <= 3)
+                
+        totalCornerParity += getCornerParity(inCubie, isLeftSideCubie, isOnFrontOfCube, isOnTopOfCube)
+      } // end outer 'for' loop
       
-      println("Total corner parity: " + totalCornerParity)
-      
-      if (invalidOrientationFlag) false
-      else totalCornerParity % 3 == 0
+      // Returns whether the total parity is divisible by 3
+      totalCornerParity % 3 == 0
+    }
+    
+    // I DONT KNOW WHAT THIS NEEDS TO DO
+    def getSideOrientations(side: Cubie): Array[Cubie] = {
+      null
     }
     
     /**
-     * Test 4 of 4: side parity.
+     * Test 5 of 5: side parity.
      * 
      * @return  true if passed the test, false otherwise
      */
@@ -205,10 +209,12 @@ object CubeValidator {
     }
     
     // Returns true when all tests pass, false if one or more fails
-    println("Easy tests: " + (hasValidNumOfColors && isValidCenters))
+    println("Valid # of colors: " + hasValidNumOfColors)
+    println("Valid centers: " + hasValidCenters)
     println("Permutation test: " + isValidPermutationParity)
-    isValidPermutationParity
-    //isValidCornerOrientationParity &&
+    println("Corner parity test: " + isValidCornerOrientationParity)
+    isValidPermutationParity &&
+    isValidCornerOrientationParity
     //isValidSideOrientationParity
   }
 }
