@@ -51,7 +51,7 @@ object common {
     cube(16) = Array(ls(5).charAt(7), ls(7).charAt(2), 'x')
     cube(18) = Array('x',             ls(6).charAt(1), ls(5).charAt(4))
     
-    // Return the arranged cube
+    // Return the arranged Cube
     cube
   }
   
@@ -89,9 +89,8 @@ object common {
     solvedCube(16) = Array('B', 'O', 'x')
     solvedCube(18) = Array('x', 'O', 'Y')
     
-    // Return back the finished Cube
+    // Return the finished Cube
     solvedCube
-    
   }
   
   /**
@@ -108,9 +107,7 @@ object common {
    * Prints the given index list.
    */
   def printIndices(ls: Array[Int]) {
-    for (elem <- ls) {
-      print(elem + ", ")
-    }
+    for (elem <- ls) print(elem + ", ")
     println()
   }
   
@@ -118,8 +115,6 @@ object common {
    * Prints the given sequence of cubies.
    */
   def printSeq(seq: Array[Cubie]) {
-    for (c <- seq) {
-      println(c(0) + ", " + c(1) + ", " + c(2))
-    }
+    for (c <- seq) println(c(0) + ", " + c(1) + ", " + c(2))
   }
 }

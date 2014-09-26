@@ -1,6 +1,7 @@
 package rubik
 
 import scala.io.Source
+import scala.util.{Try,Success,Failure}
 
 /**
  * Starting point for the Rubik's Cube AI.
@@ -8,21 +9,27 @@ import scala.io.Source
  * @author  John Paul Welsh
  */
 object run {
-
-  /**
-   * File reading taken from http://alvinalexander.com/scala/scala-how-open-read-files-scala-examples
-   */
+  
   def main(args: Array[String]) {
+    
+    def attemptToReadFile(filename: String): Try[Array[String]] = {
+      Try(Source.fromFile(filename).getLines.map(x => x.trim()).toArray)
+    }
+    
     // Current path to the file is ../../initial.txt
     val filename = args(0)
-    // Read in the text file, make it a List out of the lines of the file, trim each line, and make it an Array
-    val filelines: Array[String] = io.Source.fromFile(filename).getLines.map(x => x.trim()).toArray
-    // Put the input characters into a Cube
-    var cube = common.arrangeInput(filelines)
-    // Set up a prototype of a Cube in its solved state
-    var solvedCube = common.setSolvedCube
-    
-    println("Valid color counts? " + CubeValidator.hasValidNumOfColors(filelines))
-    println("Valid cube? " + CubeValidator.isValidCube(filelines, cube, solvedCube))
+    // Try: read in the text file, make it a List out of the lines of the file, trim each line, and make it an Array
+    // If it failed, print false, otherwise assign it to a variable
+    attemptToReadFile(filename) match {
+      case Failure(f)     => println(false)
+      case Success(lines) => {
+        if (lines.isEmpty) println(false)
+        else {
+          val cube = common.arrangeInput(lines)
+          val solvedCube = common.setSolvedCube
+          println(CubeValidator.isValidCube(lines, cube, solvedCube)) 
+        }
+      }
+    }
   }
 }
