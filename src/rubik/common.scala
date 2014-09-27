@@ -43,7 +43,7 @@ object common {
     
     cube(8)  = Array(ls(4).charAt(0), 'x', ls(10).charAt(0))
     cube(9)  = Array(ls(4).charAt(8), 'x', ls(10).charAt(2))
-    cube(10) = Array(ls(4).charAt(2), 'x', ls(4).charAt(5))
+    cube(10) = Array(ls(4).charAt(2), 'x', ls(4).charAt(3))
     cube(11) = Array(ls(4).charAt(6), 'x', ls(4).charAt(5))
     
     cube(13) = Array('x',             ls(8).charAt(1), ls(9).charAt(1))

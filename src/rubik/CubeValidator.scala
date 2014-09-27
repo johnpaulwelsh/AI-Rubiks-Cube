@@ -65,7 +65,7 @@ object CubeValidator {
       
       for (i <- 0 until seq.length) {
         for (j <- i until seq.length) {
-          if (seq(j) < seq(i)) count += 1
+          if (seq(i) > seq(j)) count += 1
         }
       }
       count
@@ -95,9 +95,7 @@ object CubeValidator {
       
       for (i <- 0 until seqSolved.length) {
         for (j <- 0 until seqNow.length) {
-          if (matchingCubies(seqSolved(i), seqNow(j))) {
-            accum(j) = i
-          }
+          if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
         }
       }
       accum
@@ -113,12 +111,12 @@ object CubeValidator {
       val seq1goal = getCubeCornerList(solved)
       val seq2now  = getCubeSideList(input)
       val seq2goal = getCubeSideList(solved)
-      
+            
       // The initialized arrays are filled with zeroes -- this is very important regarding
       // the if-elseif-else statement below
       val seq1Indices = getCubieIndices(seq1now, seq1goal, Array.ofDim(8))
       val seq2Indices = getCubieIndices(seq2now, seq2goal, Array.ofDim(12))
-      
+            
       val sumInversions = inversionCount(seq1Indices) + inversionCount(seq2Indices)
       
       // If there is more than one 0 in either sequence, then there was at least one "missing"
@@ -205,7 +203,7 @@ object CubeValidator {
      * @param idx    the index of the input Cubie in the list of all side Cubies
      * @return  the parity value for the Cubie
      */
-    def getSideParity(c: Cubie, idx: Int): Int = {
+    def getSideParity(c: Cubie): Int = {
       // Rule 1: if the y-axis is R or O, we're good. All we need to do to get the Cubie in its right position
       //         (so also taking into account the other color on the Cubie) is spin the top or bottom face. Since
       //         it only takes spins on L, R, U, or D (here, only on U or D), then the parity is 0.
@@ -228,12 +226,12 @@ object CubeValidator {
         else if (c(0) == 'R' || c(0) == 'O') 1
         
         // Rule 5a: if it has W or Y facing front or back, then we're good.
-        // Rule 5b: if it has B or G facing left or right, then we're bad.
+        // Rule 5b: if it has W or Y facing left or right, then we're bad.
         else if (c(2) == 'W' || c(2) == 'Y') 0
-        else if (c(0) == 'B' || c(0) == 'G') 1
-        else -1
+        else if (c(0) == 'W' || c(0) == 'Y') 1
+        else 0
       }
-      else -1
+      else 0
     }
     
     /**
@@ -248,16 +246,16 @@ object CubeValidator {
       
       for (inCubie <- inputSides) {
         for (solCubie <- solvedSides) {
-          if (matchingCubies(inCubie, solCubie)) totalSideParity += getSideParity(inCubie, solvedSides.indexOf(inCubie))
+          if (matchingCubies(inCubie, solCubie)) totalSideParity += getSideParity(inCubie)
         }
       }
       totalSideParity % 2 == 0
     }
     
     // Returns true when all tests pass, false if one or more fails
-    if (!isValidPermutationParity) println("Permutation test failed")
-    if (!isValidCornerOrientationParity) println("Corner test failed")
-    if (!isValidSideOrientationParity) println("Side test failed")
+    //if (!isValidPermutationParity) println("Permutation test failed")
+    //if (!isValidCornerOrientationParity) println("Corner test failed")
+    //if (!isValidSideOrientationParity) println("Side test failed")
     hasValidNumOfColors &&
       hasValidCenters &&
       isValidPermutationParity &&
