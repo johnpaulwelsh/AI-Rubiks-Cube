@@ -1,0 +1,9 @@
+nbproject
+*.iml
+*.ipr
+*.iws
+.idea
+out
+manifest.mf
+build.xml
+.DS_Store
