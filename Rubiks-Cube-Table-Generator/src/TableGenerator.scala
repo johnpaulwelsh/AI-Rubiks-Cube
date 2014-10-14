@@ -1,3 +1,5 @@
+import common._
+
 /**
  * Entry point for generating binary files. These files will represent every permutation
  * (of position and orientation) for three groups of cubies: the 8 corners, 6 of the sides,
@@ -7,9 +9,33 @@
  *
  * @author John Paul Welsh
  */
+
 object TableGenerator {
 
+  def findNewStateForSetOfCubies(cubies: Array[Cubie]) {
+
+  }
+
+  def representStateInFile(state: Cube) {
+    // TODO: Figure out how to represent a state in the file, return it
+
+    // Corners
+    // 8! * 3^7 = 88179840 combinations
+    // range of # of moves to get each corner to its goal = 0-11
+    // 4 bits for each table entry
+
+    // Edges (6 at a time)
+    // 12!/6! * 2^6 = 42577920 combinations
+    // range of # of moves to get each edge to its goal = 0-10
+    // 4 bits for each table entry
+  }
+
+  def putStateInFile(state: Any) = {
+    // TODO: Change type of state to whatever we're using to store a state
+  }
+
   def main(args: Array[String]) {
-    println("Dingo dongo")
+    val solvedCube = setSolvedCube()
+    println(solvedCube.deep)
   }
 }
