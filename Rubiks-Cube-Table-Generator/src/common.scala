@@ -18,10 +18,10 @@ object common {
    * with a lowercase 'x'.
    */
   def arrangeInput(ls: Array[String]): Cube = {
-    var cube = Array.ofDim[Cubie](20)
+    val cube = Array.ofDim[Cubie](20)
 
     // corner cubies first, since they actually hold 3 colors    
-    //              x                y                z
+    //               x                y                z
     cube(0)  = Array(ls(3).charAt(0), ls(0).charAt(0), ls(11).charAt(0))
     cube(2)  = Array(ls(3).charAt(8), ls(0).charAt(2), ls(11).charAt(2))
     cube(5)  = Array(ls(3).charAt(2), ls(2).charAt(0), ls(3).charAt(3))
@@ -57,7 +57,7 @@ object common {
    * Fills a cube instance to represent the solved state.
    */
   def setSolvedCube(): Cube = {
-    var solvedCube = Array.ofDim[Cubie](20)
+    val solvedCube = Array.ofDim[Cubie](20)
 
     // Corner cubies
     //                      x    y    z
@@ -144,54 +144,137 @@ object common {
   /**
    * Makes an 'up' turn on the cube.
    *
-   * @param cube
+   * @param cube  The Rubik's Cube
+   * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    */
-  def turn_U(cube: Cube) {
+  def turn_U(cube: Cube, turn: Short) {
+    for (i <- 0 until turn) {
+      val tempCorner = cube(5) // forward-left corner cubie
+      cube(5) = cube(7)
+      cube(7) = cube(2)
+      cube(2) = cube(0)
+      cube(0) = tempCorner
 
+      val tempSide = cube(3)   // left side cubie
+      cube(3) = cube(6)
+      cube(6) = cube(4)
+      cube(4) = cube(1)
+      cube(1) = tempSide
+    }
   }
 
   /**
    * Makes a 'down' turn on the cube.
    *
-   * @param cube
+   * @param cube  The Rubik's Cube
+   * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    */
-  def turn_D(cube: Cube) {
+  def turn_D(cube: Cube, turn: Short) {
+    // TODO: change indices here
+    for (i <- 0 until turn) {
+      val tempCorner = cube(5) // forward-left corner cubie
+      cube(5) = cube(7)
+      cube(7) = cube(2)
+      cube(2) = cube(0)
+      cube(0) = tempCorner
 
+      val tempSide = cube(3)   // left side cubie
+      cube(3) = cube(6)
+      cube(6) = cube(4)
+      cube(4) = cube(1)
+      cube(1) = tempSide
+    }
   }
 
   /**
    * Makes a 'left' turn on the cube.
    *
-   * @param cube
+   * @param cube  The Rubik's Cube
+   * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    */
-  def turn_L(cube: Cube) {
+  def turn_L(cube: Cube, turn: Short) {
+    // TODO: change indices here
+    for (i <- 0 until turn) {
+      val tempCorner = cube(5) // forward-left corner cubie
+      cube(5) = cube(7)
+      cube(7) = cube(2)
+      cube(2) = cube(0)
+      cube(0) = tempCorner
 
+      val tempSide = cube(3)   // left side cubie
+      cube(3) = cube(6)
+      cube(6) = cube(4)
+      cube(4) = cube(1)
+      cube(1) = tempSide
+    }
   }
 
   /**
    * Makes a 'right' turn on the cube.
    *
-   * @param cube
+   * @param cube  The Rubik's Cube
+   * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    */
-  def turn_R(cube: Cube) {
+  def turn_R(cube: Cube, turn: Short) {
+    // TODO: change indices here
+    for (i <- 0 until turn) {
+      val tempCorner = cube(5) // forward-left corner cubie
+      cube(5) = cube(7)
+      cube(7) = cube(2)
+      cube(2) = cube(0)
+      cube(0) = tempCorner
 
+      val tempSide = cube(3)   // left side cubie
+      cube(3) = cube(6)
+      cube(6) = cube(4)
+      cube(4) = cube(1)
+      cube(1) = tempSide
+    }
   }
 
   /**
    * Makes a 'front' turn on the cube.
    *
-   * @param cube
+   * @param cube  The Rubik's Cube
+   * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    */
-  def turn_F(cube: Cube) {
+  def turn_F(cube: Cube, turn: Short) {
+    // TODO: change indices here
+    for (i <- 0 until turn) {
+      val tempCorner = cube(5) // forward-left corner cubie
+      cube(5) = cube(7)
+      cube(7) = cube(2)
+      cube(2) = cube(0)
+      cube(0) = tempCorner
 
+      val tempSide = cube(3)   // left side cubie
+      cube(3) = cube(6)
+      cube(6) = cube(4)
+      cube(4) = cube(1)
+      cube(1) = tempSide
+    }
   }
 
   /**
    * Makes a 'back' turn on the cube.
    *
-   * @param cube
+   * @param cube  The Rubik's Cube
+   * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    */
-  def turn_B(cube: Cube) {
+  def turn_B(cube: Cube, turn: Short) {
+    // TODO: change indices here
+    for (i <- 0 until turn) {
+      val tempCorner = cube(5) // forward-left corner cubie
+      cube(5) = cube(7)
+      cube(7) = cube(2)
+      cube(2) = cube(0)
+      cube(0) = tempCorner
 
+      val tempSide = cube(3)   // left side cubie
+      cube(3) = cube(6)
+      cube(6) = cube(4)
+      cube(4) = cube(1)
+      cube(1) = tempSide
+    }
   }
 }

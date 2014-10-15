@@ -18,7 +18,7 @@ object common {
    * with a lowercase 'x'.
    */
   def arrangeInput(ls: Array[String]): Cube = {
-    var cube = Array.ofDim[Cubie](20)
+    val cube = Array.ofDim[Cubie](20)
 
     // corner cubies first, since they actually hold 3 colors    
     //              x                y                z
@@ -57,7 +57,7 @@ object common {
    * Fills a cube instance to represent the solved state.
    */
   def setSolvedCube(): Cube = {
-    var solvedCube = Array.ofDim[Cubie](20)
+    val solvedCube = Array.ofDim[Cubie](20)
 
     // Corner cubies
     //                      x    y    z

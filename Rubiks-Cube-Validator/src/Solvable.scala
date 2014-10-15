@@ -11,7 +11,7 @@ object Solvable {
   def main(args: Array[String]) {
 
     def attemptToReadFile(filename: String): Try[Array[String]] = {
-      Try(Source.fromFile(filename).getLines.map(x => x.trim()).toArray)
+      Try(Source.fromFile(filename).getLines().map(x => x.trim()).toArray)
     }
 
     // Current path to the file is ../../initial.txt
@@ -20,14 +20,13 @@ object Solvable {
     // If it failed, print false, otherwise assign it to a variable
     attemptToReadFile(filename) match {
       case Failure(f)     => println(false)
-      case Success(lines) => {
+      case Success(lines) =>
         if (lines.isEmpty) println(false)
         else {
           val cube = common.arrangeInput(lines)
-          val solvedCube = common.setSolvedCube
+          val solvedCube = common.setSolvedCube()
           println(CubeValidator.isValidCube(lines, cube, solvedCube))
         }
-      }
     }
   }
 }

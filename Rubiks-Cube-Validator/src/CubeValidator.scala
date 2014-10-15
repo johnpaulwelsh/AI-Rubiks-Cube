@@ -72,7 +72,7 @@ object CubeValidator {
      */
     def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
       if (solved.isEmpty) true
-      else if (!(input.deep.contains(solved.head))) false
+      else if (!input.deep.contains(solved.head)) false
       else matchingCubies(input, solved.tail)
     }
 
@@ -168,18 +168,18 @@ object CubeValidator {
       var totalCornerParity = 0
 
       for (inCubie <- inputCorners) {
-        val isLeftSideCubie = (inputCorners.indexOf(inCubie) == 0 ||
-          inputCorners.indexOf(inCubie) == 2 ||
-          inputCorners.indexOf(inCubie) == 4 ||
-          inputCorners.indexOf(inCubie) == 6)
+        val isLeftSideCubie = inputCorners.indexOf(inCubie) == 0 ||
+                              inputCorners.indexOf(inCubie) == 2 ||
+                              inputCorners.indexOf(inCubie) == 4 ||
+                              inputCorners.indexOf(inCubie) == 6
 
-        val isOnFrontOfCube = (inputCorners.indexOf(inCubie) == 2 ||
-          inputCorners.indexOf(inCubie) == 3 ||
-          inputCorners.indexOf(inCubie) == 6 ||
-          inputCorners.indexOf(inCubie) == 7)
+        val isOnFrontOfCube = inputCorners.indexOf(inCubie) == 2 ||
+                              inputCorners.indexOf(inCubie) == 3 ||
+                              inputCorners.indexOf(inCubie) == 6 ||
+                              inputCorners.indexOf(inCubie) == 7
 
-        val isOnTopOfCube   = (inputCorners.indexOf(inCubie) >= 0 &&
-          inputCorners.indexOf(inCubie) <= 3)
+        val isOnTopOfCube   = inputCorners.indexOf(inCubie) >= 0 &&
+                              inputCorners.indexOf(inCubie) <= 3
 
         totalCornerParity += getCornerParity(inCubie, isLeftSideCubie, isOnFrontOfCube, isOnTopOfCube)
       }
@@ -232,7 +232,7 @@ object CubeValidator {
      *
      * @return  true if passed the test, false otherwise
      */
-    def isValidSideOrientationParity(): Boolean = {
+    def isValidSideOrientationParity: Boolean = {
       val inputSides = getCubeSideList(input)
       val solvedSides = getCubeSideList(solved)
       var totalSideParity = 0
