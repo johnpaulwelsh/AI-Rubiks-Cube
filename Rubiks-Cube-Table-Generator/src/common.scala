@@ -148,18 +148,21 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_U(cube: Cube, turn: Short): Cube = {
+  def turn_U(cube: Cube, turn: Byte): Cube = {
+
+    def orient(cubie: Cubie): Cubie = Array(cubie(2), cubie(1), cubie(0))
+
     for (i <- 0 until turn) {
-      val tempCorner = cube(0)
-      cube(0) = cube(5)
-      cube(5) = cube(7)
-      cube(7) = cube(2)
+      val tempCorner = orient(cube(0))
+      cube(0) = orient(cube(5))
+      cube(5) = orient(cube(7))
+      cube(7) = orient(cube(2))
       cube(2) = tempCorner
 
-      val tempSide = cube(1)
-      cube(1) = cube(3)
-      cube(3) = cube(6)
-      cube(6) = cube(4)
+      val tempSide = orient(cube(1))
+      cube(1) = orient(cube(3))
+      cube(3) = orient(cube(6))
+      cube(6) = orient(cube(4))
       cube(4) = tempSide
     }
     cube
@@ -172,18 +175,21 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_D(cube: Cube, turn: Short): Cube = {
+  def turn_D(cube: Cube, turn: Byte): Cube = {
+
+    def orient(cubie: Cubie): Cubie = Array(cubie(2), cubie(1), cubie(0))
+
     for (i <- 0 until turn) {
-      val tempCorner = cube(17)
-      cube(17) = cube(12)
-      cube(12) = cube(14)
-      cube(14) = cube(19)
+      val tempCorner = orient(cube(17))
+      cube(17) = orient(cube(12))
+      cube(12) = orient(cube(14))
+      cube(14) = orient(cube(19))
       cube(19) = tempCorner
 
-      val tempSide = cube(18)
-      cube(18) = cube(15)
-      cube(15) = cube(13)
-      cube(13) = cube(16)
+      val tempSide = orient(cube(18))
+      cube(18) = orient(cube(15))
+      cube(15) = orient(cube(13))
+      cube(13) = orient(cube(16))
       cube(16) = tempSide
     }
     cube
@@ -196,18 +202,21 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_L(cube: Cube, turn: Short): Cube = {
+  def turn_L(cube: Cube, turn: Byte): Cube = {
+
+    def orient(cubie: Cubie): Cubie = Array(cubie(0), cubie(2), cubie(1))
+
     for (i <- 0 until turn) {
-      val tempCorner = cube(0)
-      cube(0) = cube(12)
-      cube(12) = cube(17)
-      cube(17) = cube(5)
+      val tempCorner = orient(cube(0))
+      cube(0) = orient(cube(12))
+      cube(12) = orient(cube(17))
+      cube(17) = orient(cube(5))
       cube(5) = tempCorner
 
-      val tempSide = cube(3)
-      cube(3) = cube(8)
-      cube(8) = cube(15)
-      cube(15) = cube(10)
+      val tempSide = orient(cube(3))
+      cube(3) = orient(cube(8))
+      cube(8) = orient(cube(15))
+      cube(15) = orient(cube(10))
       cube(10) = tempSide
     }
     cube
@@ -220,18 +229,21 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_R(cube: Cube, turn: Short): Cube = {
+  def turn_R(cube: Cube, turn: Byte): Cube = {
+
+    def orient(cubie: Cubie): Cubie = Array(cubie(0), cubie(2), cubie(1))
+
     for (i <- 0 until turn) {
-      val tempCorner = cube(7)
-      cube(7) = cube(19)
-      cube(19) = cube(14)
-      cube(14) = cube(2)
+      val tempCorner = orient(cube(7))
+      cube(7) = orient(cube(19))
+      cube(19) = orient(cube(14))
+      cube(14) = orient(cube(2))
       cube(2) = tempCorner
 
-      val tempSide = cube(4)
-      cube(4) = cube(11)
-      cube(11) = cube(16)
-      cube(16) = cube(9)
+      val tempSide = orient(cube(4))
+      cube(4) = orient(cube(11))
+      cube(11) = orient(cube(16))
+      cube(16) = orient(cube(9))
       cube(9) = tempSide
     }
     cube
@@ -244,18 +256,21 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_F(cube: Cube, turn: Short): Cube = {
+  def turn_F(cube: Cube, turn: Byte): Cube = {
+
+    def orient(cubie: Cubie): Cubie = Array(cubie(1), cubie(0), cubie(2))
+
     for (i <- 0 until turn) {
-      val tempCorner = cube(5)
-      cube(5) = cube(17)
-      cube(17) = cube(19)
-      cube(19) = cube(7)
+      val tempCorner = orient(cube(5))
+      cube(5) = orient(cube(17))
+      cube(17) = orient(cube(19))
+      cube(19) = orient(cube(7))
       cube(7) = tempCorner
 
-      val tempSide = cube(6)
-      cube(6) = cube(10)
-      cube(10) = cube(18)
-      cube(18) = cube(11)
+      val tempSide = orient(cube(6))
+      cube(6) = orient(cube(10))
+      cube(10) = orient(cube(18))
+      cube(18) = orient(cube(11))
       cube(11) = tempSide
     }
     cube
@@ -268,18 +283,21 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_B(cube: Cube, turn: Short): Cube = {
+  def turn_B(cube: Cube, turn: Byte): Cube = {
+
+    def orient(cubie: Cubie): Cubie = Array(cubie(1), cubie(0), cubie(2))
+
     for (i <- 0 until turn) {
-      val tempCorner = cube(2)
-      cube(2) = cube(14)
-      cube(14) = cube(12)
-      cube(12) = cube(0)
+      val tempCorner = orient(cube(2))
+      cube(2) = orient(cube(14))
+      cube(14) = orient(cube(12))
+      cube(12) = orient(cube(0))
       cube(0) = tempCorner
 
-      val tempSide = cube(1)
-      cube(1) = cube(9)
-      cube(9) = cube(13)
-      cube(13) = cube(8)
+      val tempSide = orient(cube(1))
+      cube(1) = orient(cube(9))
+      cube(9) = orient(cube(13))
+      cube(13) = orient(cube(8))
       cube(8) = tempSide
     }
     cube

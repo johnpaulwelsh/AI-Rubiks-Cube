@@ -1,3 +1,4 @@
+import CubieEnum._
 import common._
 
 /**
@@ -15,16 +16,26 @@ import common._
  *
  * @author John Paul Welsh
  */
-
 object TableGenerator {
+
+  /**
+   * Determines whether two cubies match, based solely on contents and not order.
+   *
+   * @param input  The Cubie in question
+   * @param enum   An Enumerated type representing a Cubie (in the solved state)
+   * @return       True if the Cubies match (regardless of orientation), false otherwise
+   */
+  def matchingCubies(input: Cubie, enum: CubieEnum): Boolean = {
+    if (enum.isEmpty) true
+    else if (!input.deep.contains(enum.head)) false
+    else matchingCubies(input, enum.tail)
+  }
 
   def findNewStateForSetOfCubies(cubies: Array[Cubie]) {
 
   }
 
-  def representStateInFile(state: Cube) {
-    // TODO: Figure out how to represent a state in the file, return it
-
+  def representMoveInFile(state: Byte) {
     // Corners
     // 8! * 3^7 = 88179840 combinations
     // range of # of moves to get each corner to its goal = 0-11
@@ -36,12 +47,14 @@ object TableGenerator {
     // 4 bits for each table entry
   }
 
-  def putStateInFile(state: Any) = {
-    // TODO: Change type of state to whatever we're using to store a state
+  def putMovesInFile(state: Byte) = {
+
   }
 
   def main(args: Array[String]) {
     val solvedCube = setSolvedCube()
-    println(solvedCube.deep)
+//    val isCornerMatchList: List[Boolean] = getCubeCornerList(solvedCube).toList.map(matchingCubies(_, BOW))
+    val perms = getCubeCornerList(solvedCube).toSeq.permutations
+    println(perms.length)
   }
 }
