@@ -148,7 +148,7 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_U(cube: Cube, turn: Byte): Cube = {
+  def turn_U(cube: Cube, turn: Int): Cube = {
 
     def orient(cubie: Cubie): Cubie = Array(cubie(2), cubie(1), cubie(0))
 
@@ -175,7 +175,7 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_D(cube: Cube, turn: Byte): Cube = {
+  def turn_D(cube: Cube, turn: Int): Cube = {
 
     def orient(cubie: Cubie): Cubie = Array(cubie(2), cubie(1), cubie(0))
 
@@ -202,7 +202,7 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_L(cube: Cube, turn: Byte): Cube = {
+  def turn_L(cube: Cube, turn: Int): Cube = {
 
     def orient(cubie: Cubie): Cubie = Array(cubie(0), cubie(2), cubie(1))
 
@@ -229,7 +229,7 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_R(cube: Cube, turn: Byte): Cube = {
+  def turn_R(cube: Cube, turn: Int): Cube = {
 
     def orient(cubie: Cubie): Cubie = Array(cubie(0), cubie(2), cubie(1))
 
@@ -256,7 +256,7 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_F(cube: Cube, turn: Byte): Cube = {
+  def turn_F(cube: Cube, turn: Int): Cube = {
 
     def orient(cubie: Cubie): Cubie = Array(cubie(1), cubie(0), cubie(2))
 
@@ -283,7 +283,7 @@ object common {
    * @param turn  The number of clockwise quarter-turns we are making to the face (1, 2, or 3)
    * @return      The cube with the turn applied
    */
-  def turn_B(cube: Cube, turn: Byte): Cube = {
+  def turn_B(cube: Cube, turn: Int): Cube = {
 
     def orient(cubie: Cubie): Cubie = Array(cubie(1), cubie(0), cubie(2))
 
