@@ -1,6 +1,6 @@
 import common._
-import java.io.{DataOutputStream, FileOutputStream, ObjectOutputStream}
-import scala.collection.mutable.HashMap
+import java.io.{FileOutputStream, ObjectOutputStream}
+import scala.collection.mutable
 
 /**
  * Entry point for generating binary files. These files will represent every permutation
@@ -35,7 +35,7 @@ object TableGenerator {
    * function, and the value is the number of moves it took to get from the solved cube to that
    * state. One for corners, and two for sides.
    */
-  val cornerHash, side1Hash, side2Hash = HashMap[Int, Int]()
+  val cornerHash, side1Hash, side2Hash = mutable.HashMap[Int, Int]()
 
   /**
    * Determines whether two cubies match, based solely on contents and not order.
@@ -73,27 +73,29 @@ object TableGenerator {
    * Hashing function for corner cubies. Generates a unique Integer to represent the state of the cube,
    * in regards to the cubies being looked at.
    *
-   * @param cubies  the cubies in question, used to determine what constitutes a cube state
+   * @param cubiesList  the cubies in question, used to determine what constitutes a cube state
    * @return  a hash value for this state
    */
-  def doHashCorners(cubies: Array[Cubie]): Int = {
-    var cornerVals = Array(0, 1, 2, 3, 4, 5, 6, 7)
+  def doHashCorners(cubiesList: Array[Cubie]): Int = {
+    var cornerVals = (0 to 7).toArray
 
     def accumulate(cbs: Array[Int], fact: Int, accum: Int): Int = {
       if (fact < 0) accum
       else {
         // the value between 0 to length-1 that this # in cbs currently has (after shifting)
         val idx = cornerVals.indexOf(cbs.head)
-        // the math, not including the orientation math
-        val newAccum = factorial(fact) * idx
-        // remove idx from values and shift everything down
-        cornerVals = cornerVals.take(idx) ++ cornerVals.drop(idx + 1)
+        // Can be 0, 1, or 2
+        val orient = getCornerParity(cubiesList.head, cubiesList)
+        // The math! (the current factorial "power" * the "points" for this cubie * 3^orient
+        val newAccum = factorial(fact) * idx * Math.pow(3, orient).toInt
+        // Remove idx from values and shift everything down
+        cornerVals = (0 to fact-1).toArray
 
         accumulate(cbs.tail, fact-1, accum + newAccum)
       }
     }
 
-    val cornerIndices = getCubieIndices(cubies, solvedCornerCubies, Array.ofDim(8))
+    val cornerIndices = getCubieIndices(cubiesList, solvedCornerCubies, Array.ofDim(8))
     accumulate(cornerIndices, 7, 0)
   }
 
@@ -101,34 +103,35 @@ object TableGenerator {
    * Hashing function for side cubies. Generates a unique Integer to represent the state of the cube,
    * in regards to the cubies being looked at.
    *
-   * @param cubies          the cubies in question, used to determine what constitutes a cube state
+   * @param cubiesList      the cubies in question, used to determine what constitutes a cube state
    * @param isFirst6Cubies  determines which half of the side cubies we are working with
    * @return  a hash value for this state
    */
-  def doHashSides(cubies: Array[Cubie], isFirst6Cubies: Boolean): Int = {
-    var sideVals = Array(0, 1, 2, 3, 4, 5)
-
-    // divide the whole thing by 6!
+  def doHashSides(cubiesList: Array[Cubie], isFirst6Cubies: Boolean): Int = {
+    var sideVals = (0 to 11).toArray
 
     def accumulate(cbs: Array[Int], fact: Int, accum: Int): Int = {
-      if (fact < 0) accum
+      if (fact < 6) accum
       else {
         // the value between 0 to length-1 that this # in cbs currently has (after shifting)
         val idx = sideVals.indexOf(cbs.head)
-        // the math, not including the orientation math
+        // Can be 0 or 1
+        val orient = getSideParity(cubiesList.head)
+        // The math! (the current factorial "power" * the "points" for this cubie * 2^orient)
         val newAccum = factorial(fact) * idx
         // remove idx from values and shift everything down
-        sideVals = sideVals.take(idx) ++ sideVals.drop(idx + 1)
+        sideVals = (0 to fact-1).toArray
 
         accumulate(cbs.tail, fact-1, accum + newAccum)
       }
     }
 
     val sideIndices = {
-      if (isFirst6Cubies) getCubieIndices(cubies, solvedFirstSideCubies, Array.ofDim(6))
-      else                getCubieIndices(cubies, solvedSecondSideCubies, Array.ofDim(6))
+      if (isFirst6Cubies) getCubieIndices(cubiesList, solvedFirstSideCubies, Array.ofDim(6))
+      else                getCubieIndices(cubiesList, solvedSecondSideCubies, Array.ofDim(6))
     }
-    accumulate(sideIndices, 5, 0)
+    // Must divide by 6! at the end!
+    accumulate(sideIndices, 11, 0) / factorial(6)
   }
 
   /**
@@ -163,11 +166,12 @@ object TableGenerator {
     }
 
     val turnedCube = turn_U(c, 1)
-    val turnedCubeCorners = getCubeCornerList(turnedCube)
-    val hc  = doHashCorners(turnedCubeCorners)
-    println(hc)
+    val hc  = doHashCorners(getCubeCornerList(turnedCube))
+    val hs1 = doHashSides(getFirstHalfOfCubeSides(turnedCube), true)
+    val hs2 = doHashSides(getSecondHalfOfCubeSides(turnedCube), false)
+    println(hc + ", " + hs1 + ", " + hs2)
 
-    if (count <= 0) recurse()
+    //if (count <= 0) recurse()
 
     /*
     val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true)

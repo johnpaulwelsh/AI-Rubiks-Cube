@@ -217,7 +217,7 @@ object CubeValidator {
 
         else 0
 
-      // Only for cubies in the middle layer (the ones with nothing on the y-axis)
+      // Only for cubies in the middle layer
       } else {
         // Rule 4a: if it has R or O facing front or back, then we're good.
         // Rule 4b: if it has R or O facing left or right, then we're bad.

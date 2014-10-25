@@ -140,18 +140,103 @@ object common {
    */
   def getSecondHalfOfCubeSides(c: Cube): Array[Cubie] = Array(c(10), c(11), c(13), c(15), c(16), c(18))
 
+  /**
+   * Gets the orientation of a corner Cubie.
+   *
+   * Inspired by the corner parity test in Rubiks-Cube-Validator, but instead of totaling the parities,
+   * we just check one cubie for whether its parity is 0, 1, or 2 (so, whether its position value is
+   * 0, 1, or 2).
+   *
+   * @param corner  the input Cubie
+   * @return  the orientation value for the Cubie
+   */
+  def getCornerParity(corner: Cubie, cList: Array[Cubie]): Int =  {
 
+    // This represents one clockwise turn, but is different depending on which side of the Cube
+    // our Cubie is (from a fixed perspective of yellow in front, red on top)
+    def shiftOnLeft(c: Cubie): Cubie  = Array(c(2), c(0), c(1))
+    def shiftOnRight(c: Cubie): Cubie = Array(c(1), c(2), c(0))
 
+    def recurse(corner: Cubie, parity: Int): Int = {
 
-  def getOrientationOfCorner(c: Cubie): Int = {
-    0
+      if (corner(1) == 'R' || corner(1) == 'O') {
+        parity
+      } else cList.indexOf(corner) match {
+        case 0 => recurse(shiftOnRight(corner), parity+1)
+        case 1 => recurse(shiftOnLeft(corner), parity+1)
+        case 2 => recurse(shiftOnLeft(corner), parity+1)
+        case 3 => recurse(shiftOnRight(corner), parity+1)
+        case 4 => recurse(shiftOnLeft(corner), parity+1)
+        case 5 => recurse(shiftOnRight(corner), parity+1)
+        case 6 => recurse(shiftOnRight(corner), parity+1)
+        case 7 => recurse(shiftOnLeft(corner), parity+1)
+        case _ => -1
+      }
+    }
+
+    recurse(corner, 0)
   }
 
+  def isLeftSideCubie(inputCorners: Array[Cubie], inCubie: Cubie): Boolean = {
+    inputCorners.indexOf(inCubie) == 0 ||
+      inputCorners.indexOf(inCubie) == 2 ||
+      inputCorners.indexOf(inCubie) == 4 ||
+      inputCorners.indexOf(inCubie) == 6
+  }
 
+  def isOnFrontOfCube(inputCorners: Array[Cubie], inCubie: Cubie): Boolean = {
+    inputCorners.indexOf(inCubie) == 2 ||
+      inputCorners.indexOf(inCubie) == 3 ||
+      inputCorners.indexOf(inCubie) == 6 ||
+      inputCorners.indexOf(inCubie) == 7
+  }
 
+  def isOnTopOfCube(inputCorners: Array[Cubie], inCubie: Cubie): Boolean = {
+    inputCorners.indexOf(inCubie) >= 0 &&
+      inputCorners.indexOf(inCubie) <= 3
+  }
+  /**
+   * Gets the orientation of a side Cubie.
+   * Inspired by the side parity test in Rubiks-Cube-Validator, but instead of totaling the parities,
+   * we just check one cubie for whether its parity is 0 or 1 (so, whether its position value is 0 or 1).
+   *
+   * @param c  the input Cubie
+   * @return  the orientation value for the Cubie
+   */
+  def getSideParity(c: Cubie): Int = {
+    // Only for cubies in the top or bottom layers
+    if (c(1) != 'x') {
 
-  def getOrientationOfSide(c: Cubie): Int = {
-    0
+      // Rule 1: if the y-axis is R or O, we're good. All we need to do to get the Cubie in its right position
+      //         (so also taking into account the other color on the Cubie) is spin the top or bottom face. Since
+      //         it only takes spins on L, R, U, or D (here, only on U or D), then the parity is 0.
+      if (c(1) == 'R' || c(1) == 'O') 0
+
+      // Rule 2: if the the x- or z-axis is R or O, we're bad. You can't get it home without using an F or B move.
+      else if (c(0) == 'R' || c(0) == 'O') 1
+      else if (c(2) == 'R' || c(2) == 'O') 1
+
+      // Rule 3a: it is bad if it has Y or W facing the sides. They require at least one F or B to fix.
+      // Rule 3b: it is good if it has B or G facing the sides.
+      else if (c(0) == 'Y' || c(0) == 'W' || c(2) == 'Y' || c(2) == 'W') 1
+      else if (c(0) == 'B' || c(0) == 'G' || c(2) == 'B' || c(2) == 'G') 0
+
+      else 0
+
+    // Only for cubies in the middle layer
+    } else {
+      // Rule 4a: if it has R or O facing front or back, then we're good.
+      // Rule 4b: if it has R or O facing left or right, then we're bad.
+      if      (c(2) == 'R' || c(2) == 'O') 0
+      else if (c(0) == 'R' || c(0) == 'O') 1
+
+      // Rule 5a: if it has W or Y facing front or back, then we're good.
+      // Rule 5b: if it has W or Y facing left or right, then we're bad.
+      else if (c(2) == 'W' || c(2) == 'Y') 0
+      else if (c(0) == 'W' || c(0) == 'Y') 1
+
+      else 0
+    }
   }
 
   /*
