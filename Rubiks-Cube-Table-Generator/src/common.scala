@@ -6,16 +6,31 @@
  * @author  John Paul Welsh
  */
 object common {
+
+  /*
+   *
+   * Type aliases for use in making a Rubik's Cube.
+   *
+   */
+
   type Cubie = Array[Char]
   type Cube = Array[Cubie]
 
+  /*
+   *
+   * "Getter" and "setter" functions for Rubik's Cube.
+   *
+   */
+
   /**
    * Transforms a cross-shaped input into a cubie-divided cube.
-   *
    * The first element of a cubie is always the color resting on the x-axis,
    * and the second and third rest on the y- and z-axes, respectively.
-   * If the cubie does not have a clor on a certain axis, that spot is filled
+   * If the cubie does not have a color on a certain axis, that spot is filled
    * with a lowercase 'x'.
+   *
+   * @param ls  an array of Strings, each one representing a row of the input
+   * @return  a Cube object
    */
   def arrangeInput(ls: Array[String]): Cube = {
     val cube = Array.ofDim[Cubie](20)
@@ -55,6 +70,8 @@ object common {
 
   /**
    * Fills a cube instance to represent the solved state.
+   *
+   * @return  a solved Rubik's Cube
    */
   def setSolvedCube(): Cube = {
     val solvedCube = Array.ofDim[Cubie](20)
@@ -95,6 +112,7 @@ object common {
    * An array of all the corner cubies in the given Cube.
    *
    * @param c  a cube
+   * @return  an array of the corner cubies
    */
   def getCubeCornerList(c: Cube): Array[Cubie] = Array(c(0), c(2), c(5), c(7), c(12), c(14), c(17), c(19))
 
@@ -102,7 +120,7 @@ object common {
    * An array of all the side cubies in the given Cube.
    *
    * @param c  a cube
-   * @return   an Array of Cubies
+   * @return   an array of the side cubies
    */
   def getCubeSideList(c: Cube): Array[Cubie] = Array(c(1), c(3), c(4), c(6), c(8), c(9), c(10), c(11), c(13), c(15), c(16), c(18))
 
@@ -110,7 +128,7 @@ object common {
    * An array of the first 6 side cubies in the given cube.
    *
    * @param c  a cube
-   * @return   an Array of Cubies
+   * @return   an array of the first 6 side cubies
    */
   def getFirstHalfOfCubeSides(c: Cube): Array[Cubie] = Array(c(1), c(3), c(4), c(6), c(8), c(9))
 
@@ -118,28 +136,29 @@ object common {
    * An array of the last 6 side cubies in the given cube.
    *
    * @param c  a cube
-   * @return   an Array of Cubies
+   * @return   an array of the first 6 side cubies
    */
   def getSecondHalfOfCubeSides(c: Cube): Array[Cubie] = Array(c(10), c(11), c(13), c(15), c(16), c(18))
 
-  /**
-   * Prints the given index list.
-   */
-  def printIndices(ls: Array[Int]) {
-    for (elem <- ls) print(elem + ", ")
-    println()
+
+
+
+  def getOrientationOfCorner(c: Cubie): Int = {
+    0
   }
 
-  /**
-   * Prints the given sequence of cubies.
-   */
-  def printSeq(seq: Array[Cubie]) {
-    for (c <- seq) println(c(0) + ", " + c(1) + ", " + c(2))
+
+
+
+  def getOrientationOfSide(c: Cubie): Int = {
+    0
   }
 
-  //
-  // Functions for making legal moves on a Cube.
-  //
+  /*
+   *
+   * Functions for making legal moves on a cube.
+   *
+   */
 
   /**
    * Makes an 'up' turn on the cube.
@@ -301,5 +320,16 @@ object common {
       cube(8) = tempSide
     }
     cube
+  }
+
+  /*
+   *
+   * Utility functions, general purpose.
+   *
+   */
+
+  def factorial(n: Int): Int = n match {
+    case 0 => 1
+    case _ => n * factorial(n-1)
   }
 }
