@@ -166,10 +166,10 @@ object common {
         case 1 => recurse(shiftOnLeft(corner), parity+1)
         case 2 => recurse(shiftOnLeft(corner), parity+1)
         case 3 => recurse(shiftOnRight(corner), parity+1)
-        case 4 => recurse(shiftOnLeft(corner), parity+1)
-        case 5 => recurse(shiftOnRight(corner), parity+1)
-        case 6 => recurse(shiftOnRight(corner), parity+1)
-        case 7 => recurse(shiftOnLeft(corner), parity+1)
+        case 4 => recurse(shiftOnRight(corner), parity+1)
+        case 5 => recurse(shiftOnLeft(corner), parity+1)
+        case 6 => recurse(shiftOnLeft(corner), parity+1)
+        case 7 => recurse(shiftOnRight(corner), parity+1)
         case _ => -1
       }
     }

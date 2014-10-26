@@ -1,4 +1,5 @@
 import common._
+import MoveEnum._
 import java.io.{FileOutputStream, ObjectOutputStream}
 import scala.collection.mutable
 
@@ -36,6 +37,14 @@ object TableGenerator {
    * state. One for corners, and two for sides.
    */
   val cornerHash, side1Hash, side2Hash = mutable.HashMap[Int, Int]()
+
+  /*
+   * Global value for the maximum number of moves that it can take to reach a new state of the cube
+   * (for a subset of cubies, like just the corners, or just half of the sides).
+   */
+
+  var ZERO, ONE, TWO = 0
+  var MAX_GENERATED_CORNER_KEY = 0
 
   /**
    * Determines whether two cubies match, based solely on contents and not order.
@@ -79,24 +88,34 @@ object TableGenerator {
   def doHashCorners(cubiesList: Array[Cubie]): Int = {
     var cornerVals = (0 to 7).toArray
 
-    def accumulate(cbs: Array[Int], fact: Int, accum: Int): Int = {
+    def accumulate(cList: Array[Cubie], cbs: Array[Int], fact: Int, accum: Int): Int = {
       if (fact < 0) accum
       else {
         // the value between 0 to length-1 that this # in cbs currently has (after shifting)
         val idx = cornerVals.indexOf(cbs.head)
-        // Can be 0, 1, or 2
-        val orient = getCornerParity(cubiesList.head, cubiesList)
-        // The math! (the current factorial "power" * the "points" for this cubie * 3^orient
-        val newAccum = factorial(fact) * idx * Math.pow(3, orient).toInt
-        // Remove idx from values and shift everything down
-        cornerVals = (0 to fact-1).toArray
+        // Can be 0, 1, or 2. cList is getting smaller each time, cubiesList is not
+        val orient = getCornerParity(cList.head, cubiesList)
 
-        accumulate(cbs.tail, fact-1, accum + newAccum)
+
+        if (orient == 0)      ZERO+=1
+        else if (orient == 1) ONE+=1
+        else if (orient == 2) TWO+=1
+
+
+        // The math! --- (fact! * "points") + ( 3^(fact-1) * orient * 8! )
+        val newAccum = {
+          if (fact > 0) ( factorial(fact) * idx ) + ( Math.pow(3, fact-1).toInt * orient * factorial(8) )
+          else          factorial(fact)
+        }
+        // Remove idx from values and shift everything down
+        cornerVals = cornerVals.take(idx) ++ cornerVals.drop(idx+1)
+
+        accumulate(cList.tail, cbs.tail, fact-1, accum + newAccum)
       }
     }
 
     val cornerIndices = getCubieIndices(cubiesList, solvedCornerCubies, Array.ofDim(8))
-    accumulate(cornerIndices, 7, 0)
+    accumulate(cubiesList, cornerIndices, 7, 0)
   }
 
   /**
@@ -117,10 +136,13 @@ object TableGenerator {
         val idx = sideVals.indexOf(cbs.head)
         // Can be 0 or 1
         val orient = getSideParity(cubiesList.head)
-        // The math! (the current factorial "power" * the "points" for this cubie * 2^orient)
-        val newAccum = factorial(fact) * idx
+        // The math! --- (fact! * "points") + ( 2^(fact-1) * orient * 12!/6! )
+        val newAccum = {
+          if (fact > 0) ( factorial(fact) * idx ) + ( Math.pow(2, fact-1).toInt * orient * (factorial(12) / factorial(6)) )
+          else          factorial(12)
+        }
         // remove idx from values and shift everything down
-        sideVals = (0 to fact-1).toArray
+        sideVals = sideVals.take(idx) ++ sideVals.drop(idx+1)
 
         accumulate(cbs.tail, fact-1, accum + newAccum)
       }
@@ -140,58 +162,180 @@ object TableGenerator {
    *
    * @param c  a representation of a Rubik's Cube
    */
-  def createStates(c: Cube, count: Int) {
+  def createStates(c: Cube, count: Int, lastMove: Move) {
 
-    def recurse() {
-      createStates(turn_U(c, 1), count+1)
-      createStates(turn_D(c, 1), count+1)
-      createStates(turn_L(c, 1), count+1)
-      createStates(turn_R(c, 1), count+1)
-      createStates(turn_F(c, 1), count+1)
-      createStates(turn_B(c, 1), count+1)
+    if (count >= 12) return
 
-      createStates(turn_U(c, 2), count+1)
-      createStates(turn_D(c, 2), count+1)
-      createStates(turn_L(c, 2), count+1)
-      createStates(turn_R(c, 2), count+1)
-      createStates(turn_F(c, 2), count+1)
-      createStates(turn_B(c, 2), count+1)
+    val hc  = doHashCorners(getCubeCornerList(c))
+    if (hc > MAX_GENERATED_CORNER_KEY) MAX_GENERATED_CORNER_KEY = hc
 
-      createStates(turn_U(c, 3), count+1)
-      createStates(turn_D(c, 3), count+1)
-      createStates(turn_L(c, 3), count+1)
-      createStates(turn_R(c, 3), count+1)
-      createStates(turn_F(c, 3), count+1)
-      createStates(turn_B(c, 3), count+1)
+//    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true)
+//    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false)
+
+//    if (cornerHash.contains(hc) && side1Hash.contains(hs1) && side2Hash.contains(hs2)) return
+//    else {
+//      if (!cornerHash.contains(hc)) cornerHash.put(hc, count)
+//      if (!side1Hash.contains(hs1)) side1Hash.put(hs1, count)
+//      if (!side2Hash.contains(hs2)) side2Hash.put(hs2, count)
+//    }
+
+    if (cornerHash.contains(hc)) return
+    else cornerHash.put(hc, count)
+
+    // UP, LEFT, and FRONT are primary
+    lastMove match {
+      case NONE =>
+        createStates(turn_U(c, 1), count+1, UP)
+        createStates(turn_D(c, 1), count+1, DOWN)
+        createStates(turn_L(c, 1), count+1, LEFT)
+        createStates(turn_R(c, 1), count+1, RIGHT)
+        createStates(turn_F(c, 1), count+1, FRONT)
+        createStates(turn_B(c, 1), count+1, BACK)
+
+        createStates(turn_U(c, 2), count+1, UP)
+        createStates(turn_D(c, 2), count+1, DOWN)
+        createStates(turn_L(c, 2), count+1, LEFT)
+        createStates(turn_R(c, 2), count+1, RIGHT)
+        createStates(turn_F(c, 2), count+1, FRONT)
+        createStates(turn_B(c, 2), count+1, BACK)
+
+        createStates(turn_U(c, 3), count+1, UP)
+        createStates(turn_D(c, 3), count+1, DOWN)
+        createStates(turn_L(c, 3), count+1, LEFT)
+        createStates(turn_R(c, 3), count+1, RIGHT)
+        createStates(turn_F(c, 3), count+1, FRONT)
+        createStates(turn_B(c, 3), count+1, BACK)
+        return
+
+      case UP =>
+        createStates(turn_D(c, 1), count+1, DOWN)
+        createStates(turn_L(c, 1), count+1, LEFT)
+        createStates(turn_R(c, 1), count+1, RIGHT)
+        createStates(turn_F(c, 1), count+1, FRONT)
+        createStates(turn_B(c, 1), count+1, BACK)
+
+        createStates(turn_D(c, 2), count+1, DOWN)
+        createStates(turn_L(c, 2), count+1, LEFT)
+        createStates(turn_R(c, 2), count+1, RIGHT)
+        createStates(turn_F(c, 2), count+1, FRONT)
+        createStates(turn_B(c, 2), count+1, BACK)
+
+        createStates(turn_D(c, 3), count+1, DOWN)
+        createStates(turn_L(c, 3), count+1, LEFT)
+        createStates(turn_R(c, 3), count+1, RIGHT)
+        createStates(turn_F(c, 3), count+1, FRONT)
+        createStates(turn_B(c, 3), count+1, BACK)
+        return
+
+      case LEFT =>
+        createStates(turn_U(c, 1), count+1, UP)
+        createStates(turn_D(c, 1), count+1, DOWN)
+        createStates(turn_R(c, 1), count+1, RIGHT)
+        createStates(turn_F(c, 1), count+1, FRONT)
+        createStates(turn_B(c, 1), count+1, BACK)
+
+        createStates(turn_U(c, 2), count+1, UP)
+        createStates(turn_D(c, 2), count+1, DOWN)
+        createStates(turn_R(c, 2), count+1, RIGHT)
+        createStates(turn_F(c, 2), count+1, FRONT)
+        createStates(turn_B(c, 2), count+1, BACK)
+
+        createStates(turn_U(c, 3), count+1, UP)
+        createStates(turn_D(c, 3), count+1, DOWN)
+        createStates(turn_R(c, 3), count+1, RIGHT)
+        createStates(turn_F(c, 3), count+1, FRONT)
+        createStates(turn_B(c, 3), count+1, BACK)
+        return
+
+      case FRONT =>
+        createStates(turn_U(c, 1), count+1, UP)
+        createStates(turn_D(c, 1), count+1, DOWN)
+        createStates(turn_L(c, 1), count+1, LEFT)
+        createStates(turn_R(c, 1), count+1, RIGHT)
+        createStates(turn_B(c, 1), count+1, BACK)
+
+        createStates(turn_U(c, 2), count+1, UP)
+        createStates(turn_D(c, 2), count+1, DOWN)
+        createStates(turn_L(c, 2), count+1, LEFT)
+        createStates(turn_R(c, 2), count+1, RIGHT)
+        createStates(turn_B(c, 2), count+1, BACK)
+
+        createStates(turn_U(c, 3), count+1, UP)
+        createStates(turn_D(c, 3), count+1, DOWN)
+        createStates(turn_L(c, 3), count+1, LEFT)
+        createStates(turn_R(c, 3), count+1, RIGHT)
+        createStates(turn_B(c, 3), count+1, BACK)
+        return
+
+      case DOWN =>
+//        createStates(turn_U(c, 1), count+1, UP)
+//        createStates(turn_D(c, 1), count+1, DOWN)
+        createStates(turn_L(c, 1), count+1, LEFT)
+        createStates(turn_R(c, 1), count+1, RIGHT)
+        createStates(turn_F(c, 1), count+1, FRONT)
+        createStates(turn_B(c, 1), count+1, BACK)
+
+//        createStates(turn_U(c, 2), count+1, UP)
+//        createStates(turn_D(c, 2), count+1, DOWN)
+        createStates(turn_L(c, 2), count+1, LEFT)
+        createStates(turn_R(c, 2), count+1, RIGHT)
+        createStates(turn_F(c, 2), count+1, FRONT)
+        createStates(turn_B(c, 2), count+1, BACK)
+
+//        createStates(turn_U(c, 3), count+1, UP)
+//        createStates(turn_D(c, 3), count+1, DOWN)
+        createStates(turn_L(c, 3), count+1, LEFT)
+        createStates(turn_R(c, 3), count+1, RIGHT)
+        createStates(turn_F(c, 3), count+1, FRONT)
+        createStates(turn_B(c, 3), count+1, BACK)
+        return
+
+      case RIGHT =>
+        createStates(turn_U(c, 1), count+1, UP)
+        createStates(turn_D(c, 1), count+1, DOWN)
+//        createStates(turn_L(c, 1), count+1, LEFT)
+//        createStates(turn_R(c, 1), count+1, RIGHT)
+        createStates(turn_F(c, 1), count+1, FRONT)
+        createStates(turn_B(c, 1), count+1, BACK)
+
+        createStates(turn_U(c, 2), count+1, UP)
+        createStates(turn_D(c, 2), count+1, DOWN)
+//        createStates(turn_L(c, 2), count+1, LEFT)
+//        createStates(turn_R(c, 2), count+1, RIGHT)
+        createStates(turn_F(c, 2), count+1, FRONT)
+        createStates(turn_B(c, 2), count+1, BACK)
+
+        createStates(turn_U(c, 3), count+1, UP)
+        createStates(turn_D(c, 3), count+1, DOWN)
+//        createStates(turn_L(c, 3), count+1, LEFT)
+//        createStates(turn_R(c, 3), count+1, RIGHT)
+        createStates(turn_F(c, 3), count+1, FRONT)
+        createStates(turn_B(c, 3), count+1, BACK)
+        return
+
+      case BACK =>
+        createStates(turn_U(c, 1), count+1, UP)
+        createStates(turn_D(c, 1), count+1, DOWN)
+        createStates(turn_L(c, 1), count+1, LEFT)
+        createStates(turn_R(c, 1), count+1, RIGHT)
+//        createStates(turn_F(c, 1), count+1, FRONT)
+//        createStates(turn_B(c, 1), count+1, BACK)
+
+        createStates(turn_U(c, 2), count+1, UP)
+        createStates(turn_D(c, 2), count+1, DOWN)
+        createStates(turn_L(c, 2), count+1, LEFT)
+        createStates(turn_R(c, 2), count+1, RIGHT)
+//        createStates(turn_F(c, 2), count+1, FRONT)
+//        createStates(turn_B(c, 2), count+1, BACK)
+
+        createStates(turn_U(c, 3), count+1, UP)
+        createStates(turn_D(c, 3), count+1, DOWN)
+        createStates(turn_L(c, 3), count+1, LEFT)
+        createStates(turn_R(c, 3), count+1, RIGHT)
+//        createStates(turn_F(c, 3), count+1, FRONT)
+//        createStates(turn_B(c, 3), count+1, BACK)
+        return
     }
-
-    val turnedCube = turn_U(c, 1)
-    val hc  = doHashCorners(getCubeCornerList(turnedCube))
-    val hs1 = doHashSides(getFirstHalfOfCubeSides(turnedCube), true)
-    val hs2 = doHashSides(getSecondHalfOfCubeSides(turnedCube), false)
-    println(hc + ", " + hs1 + ", " + hs2)
-
-    //if (count <= 0) recurse()
-
-    /*
-    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true)
-    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false)
-
-    if (!cornerHash.contains(hc)) {
-      cornerHash.put(hc, count)
-      recurse()
-    }
-
-    if (!side1Hash.contains(hs1)) {
-      side1Hash.put(hs1, count)
-      recurse()
-    }
-
-    if (!side2Hash.contains(hs2)) {
-      side2Hash.put(hs2, count)
-      recurse()
-    }
-    */
   }
 
   /**
@@ -212,7 +356,21 @@ object TableGenerator {
   }
 
   def main(args: Array[String]) {
-    createStates(solvedCube, 0)
-    //writeToFile()
+    createStates(solvedCube, 0, NONE)
+    println(cornerHash.values.toList.count(_ == 0))
+    println(cornerHash.values.toList.count(_ == 1))
+    println(cornerHash.values.toList.count(_ == 2))
+    println(cornerHash.values.toList.count(_ == 3))
+    println(cornerHash.values.toList.count(_ == 4))
+    println(cornerHash.values.toList.count(_ == 5))
+    println(cornerHash.values.toList.count(_ == 6))
+    println(cornerHash.values.toList.count(_ == 7))
+    println(cornerHash.values.toList.count(_ == 8))
+    println(cornerHash.values.toList.count(_ == 9))
+    println(cornerHash.values.toList.count(_ == 10))
+    println(cornerHash.values.toList.count(_ == 11))
+//    println(cornerHash.size + ", " + cornerHash.values.toList.count(_ == 1))
+//    println(MAX_GENERATED_CORNER_KEY)
+    println(ZERO + ", " + ONE + ", " + TWO)
   }
 }
