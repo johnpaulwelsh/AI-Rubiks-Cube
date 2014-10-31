@@ -1,7 +1,6 @@
 import common._
 import MoveEnum._
-import java.io.{FileOutputStream, ObjectOutputStream}
-import scala.collection.mutable
+import java.io.{DataOutputStream, FileOutputStream}
 
 /**
  * Entry point for generating binary files. These files will represent every permutation
@@ -32,19 +31,24 @@ object TableGenerator {
   var solvedSecondSideCubies: Array[Cubie] = getSecondHalfOfCubeSides(solvedCube)
 
   /*
-   * Global mutable HashMaps, where the key is the result of passing a cube state to the hashing
-   * function, and the value is the number of moves it took to get from the solved cube to that
-   * state. One for corners, and two for sides.
+   * Global arrays to hold the turn numbers that are obtained from each hashed cube state.
+   * each array is initialized at the exact size they ought to be by the end (8!*3^7 for corners,
+   * 12!/6!*2^6 for sides), and are populated with the number 12 to start with. This is because
+   * no move count should be 12 or higher, so when we compare whether we have a value in a particular
+   * element array, we can just see if the value we got this time is < 12. This also guarantees that
+   * we hold onto the shortest move count to get to any state.
    */
-  val cornerHash, side1Hash, side2Hash = mutable.HashMap[Int, Int]()
+  var cornerHashArray: Array[Byte] = Array.fill(88179840)(12)
+  val side1HashArray: Array[Byte] = Array.fill(42577420)(12)
+  val side2HashArray: Array[Byte] = Array.fill(42577420)(12)
 
   /*
    * Global value for the maximum number of moves that it can take to reach a new state of the cube
    * (for a subset of cubies, like just the corners, or just half of the sides).
+   *
+   * TODO: Takes too long starting around 6.
    */
-
-  var ZERO, ONE, TWO = 0
-  var MAX_GENERATED_CORNER_KEY = 0
+  val MAX_MOVE_COUNT = 5
 
   /**
    * Determines whether two cubies match, based solely on contents and not order.
@@ -88,29 +92,22 @@ object TableGenerator {
   def doHashCorners(cubiesList: Array[Cubie]): Int = {
     var cornerVals = (0 to 7).toArray
 
-    def accumulate(cList: Array[Cubie], cbs: Array[Int], fact: Int, accum: Int): Int = {
+    def accumulate(actualCubies: Array[Cubie], crnrIndices: Array[Int], fact: Int, accum: Int): Int = {
       if (fact < 0) accum
       else {
         // the value between 0 to length-1 that this # in cbs currently has (after shifting)
-        val idx = cornerVals.indexOf(cbs.head)
-        // Can be 0, 1, or 2. cList is getting smaller each time, cubiesList is not
-        val orient = getCornerParity(cList.head, cubiesList)
-
-
-        if (orient == 0)      ZERO+=1
-        else if (orient == 1) ONE+=1
-        else if (orient == 2) TWO+=1
-
-
+        val idx = cornerVals.indexOf(crnrIndices.head)
+        // Can be 0, 1, or 2  (actualCubies is getting smaller each time, cubiesList is not)
+        val orient = getCornerParity(actualCubies.head, cubiesList)
         // The math! --- (fact! * "points") + ( 3^(fact-1) * orient * 8! )
         val newAccum = {
-          if (fact > 0) ( factorial(fact) * idx ) + ( Math.pow(3, fact-1).toInt * orient * factorial(8) )
-          else          factorial(fact)
+          if (fact > 0) (factorial(fact) * idx) + (Math.pow(3, fact-1).toInt * orient * factorial(8))
+          else factorial(fact)
         }
         // Remove idx from values and shift everything down
         cornerVals = cornerVals.take(idx) ++ cornerVals.drop(idx+1)
 
-        accumulate(cList.tail, cbs.tail, fact-1, accum + newAccum)
+        accumulate(actualCubies.tail, crnrIndices.tail, fact-1, accum + newAccum)
       }
     }
 
@@ -138,8 +135,8 @@ object TableGenerator {
         val orient = getSideParity(cubiesList.head)
         // The math! --- (fact! * "points") + ( 2^(fact-1) * orient * 12!/6! )
         val newAccum = {
-          if (fact > 0) ( factorial(fact) * idx ) + ( Math.pow(2, fact-1).toInt * orient * (factorial(12) / factorial(6)) )
-          else          factorial(12)
+          if (fact > 0) (factorial(fact) * idx) + (Math.pow(2, fact - 1).toInt * orient * (factorial(12) / factorial(6)))
+          else factorial(12)
         }
         // remove idx from values and shift everything down
         sideVals = sideVals.take(idx) ++ sideVals.drop(idx+1)
@@ -150,7 +147,7 @@ object TableGenerator {
 
     val sideIndices = {
       if (isFirst6Cubies) getCubieIndices(cubiesList, solvedFirstSideCubies, Array.ofDim(6))
-      else                getCubieIndices(cubiesList, solvedSecondSideCubies, Array.ofDim(6))
+      else getCubieIndices(cubiesList, solvedSecondSideCubies, Array.ofDim(6))
     }
     // Must divide by 6! at the end!
     accumulate(sideIndices, 11, 0) / factorial(6)
@@ -164,213 +161,186 @@ object TableGenerator {
    */
   def createStates(c: Cube, count: Int, lastMove: Move) {
 
-    if (count >= 12) return
+    val hc = doHashCorners(getCubeCornerList(c)) - 1
+//    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true) - 1
+//    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false) - 1
 
-    val hc  = doHashCorners(getCubeCornerList(c))
-    if (hc > MAX_GENERATED_CORNER_KEY) MAX_GENERATED_CORNER_KEY = hc
+    if (count > MAX_MOVE_COUNT)            return
+    else if (count >= cornerHashArray(hc)) return
+    else cornerHashArray(hc) = count.toByte
 
-//    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true)
-//    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false)
-
-//    if (cornerHash.contains(hc) && side1Hash.contains(hs1) && side2Hash.contains(hs2)) return
-//    else {
-//      if (!cornerHash.contains(hc)) cornerHash.put(hc, count)
-//      if (!side1Hash.contains(hs1)) side1Hash.put(hs1, count)
-//      if (!side2Hash.contains(hs2)) side2Hash.put(hs2, count)
-//    }
-
-    if (cornerHash.contains(hc)) return
-    else cornerHash.put(hc, count)
+//    if (count > MAX_MOVE_COUNT)            return
+//    else if (count >= side1HashArray(hs1)) return
+//    else side1HashArray(hs1) = count.toByte
+//
+//    if (count > MAX_MOVE_COUNT)            return
+//    else if (count >= side2HashArray(hs2)) return
+//    else side2HashArray(hs2) = count.toByte
 
     // UP, LEFT, and FRONT are primary
     lastMove match {
       case NONE =>
-        createStates(turn_U(c, 1), count+1, UP)
-        createStates(turn_D(c, 1), count+1, DOWN)
-        createStates(turn_L(c, 1), count+1, LEFT)
-        createStates(turn_R(c, 1), count+1, RIGHT)
-        createStates(turn_F(c, 1), count+1, FRONT)
-        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_U(c, 1), count + 1, UP)
+        createStates(turn_D(c, 1), count + 1, DOWN)
+        createStates(turn_L(c, 1), count + 1, LEFT)
+        createStates(turn_R(c, 1), count + 1, RIGHT)
+        createStates(turn_F(c, 1), count + 1, FRONT)
+        createStates(turn_B(c, 1), count + 1, BACK)
 
-        createStates(turn_U(c, 2), count+1, UP)
-        createStates(turn_D(c, 2), count+1, DOWN)
-        createStates(turn_L(c, 2), count+1, LEFT)
-        createStates(turn_R(c, 2), count+1, RIGHT)
-        createStates(turn_F(c, 2), count+1, FRONT)
-        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_U(c, 2), count + 1, UP)
+        createStates(turn_D(c, 2), count + 1, DOWN)
+        createStates(turn_L(c, 2), count + 1, LEFT)
+        createStates(turn_R(c, 2), count + 1, RIGHT)
+        createStates(turn_F(c, 2), count + 1, FRONT)
+        createStates(turn_B(c, 2), count + 1, BACK)
 
-        createStates(turn_U(c, 3), count+1, UP)
-        createStates(turn_D(c, 3), count+1, DOWN)
-        createStates(turn_L(c, 3), count+1, LEFT)
-        createStates(turn_R(c, 3), count+1, RIGHT)
-        createStates(turn_F(c, 3), count+1, FRONT)
-        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_U(c, 3), count + 1, UP)
+        createStates(turn_D(c, 3), count + 1, DOWN)
+        createStates(turn_L(c, 3), count + 1, LEFT)
+        createStates(turn_R(c, 3), count + 1, RIGHT)
+        createStates(turn_F(c, 3), count + 1, FRONT)
+        createStates(turn_B(c, 3), count + 1, BACK)
         return
 
       case UP =>
-        createStates(turn_D(c, 1), count+1, DOWN)
-        createStates(turn_L(c, 1), count+1, LEFT)
-        createStates(turn_R(c, 1), count+1, RIGHT)
-        createStates(turn_F(c, 1), count+1, FRONT)
-        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_D(c, 1), count + 1, DOWN)
+        createStates(turn_L(c, 1), count + 1, LEFT)
+        createStates(turn_R(c, 1), count + 1, RIGHT)
+        createStates(turn_F(c, 1), count + 1, FRONT)
+        createStates(turn_B(c, 1), count + 1, BACK)
 
-        createStates(turn_D(c, 2), count+1, DOWN)
-        createStates(turn_L(c, 2), count+1, LEFT)
-        createStates(turn_R(c, 2), count+1, RIGHT)
-        createStates(turn_F(c, 2), count+1, FRONT)
-        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_D(c, 2), count + 1, DOWN)
+        createStates(turn_L(c, 2), count + 1, LEFT)
+        createStates(turn_R(c, 2), count + 1, RIGHT)
+        createStates(turn_F(c, 2), count + 1, FRONT)
+        createStates(turn_B(c, 2), count + 1, BACK)
 
-        createStates(turn_D(c, 3), count+1, DOWN)
-        createStates(turn_L(c, 3), count+1, LEFT)
-        createStates(turn_R(c, 3), count+1, RIGHT)
-        createStates(turn_F(c, 3), count+1, FRONT)
-        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_D(c, 3), count + 1, DOWN)
+        createStates(turn_L(c, 3), count + 1, LEFT)
+        createStates(turn_R(c, 3), count + 1, RIGHT)
+        createStates(turn_F(c, 3), count + 1, FRONT)
+        createStates(turn_B(c, 3), count + 1, BACK)
         return
 
       case LEFT =>
-        createStates(turn_U(c, 1), count+1, UP)
-        createStates(turn_D(c, 1), count+1, DOWN)
-        createStates(turn_R(c, 1), count+1, RIGHT)
-        createStates(turn_F(c, 1), count+1, FRONT)
-        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_U(c, 1), count + 1, UP)
+        createStates(turn_D(c, 1), count + 1, DOWN)
+        createStates(turn_R(c, 1), count + 1, RIGHT)
+        createStates(turn_F(c, 1), count + 1, FRONT)
+        createStates(turn_B(c, 1), count + 1, BACK)
 
-        createStates(turn_U(c, 2), count+1, UP)
-        createStates(turn_D(c, 2), count+1, DOWN)
-        createStates(turn_R(c, 2), count+1, RIGHT)
-        createStates(turn_F(c, 2), count+1, FRONT)
-        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_U(c, 2), count + 1, UP)
+        createStates(turn_D(c, 2), count + 1, DOWN)
+        createStates(turn_R(c, 2), count + 1, RIGHT)
+        createStates(turn_F(c, 2), count + 1, FRONT)
+        createStates(turn_B(c, 2), count + 1, BACK)
 
-        createStates(turn_U(c, 3), count+1, UP)
-        createStates(turn_D(c, 3), count+1, DOWN)
-        createStates(turn_R(c, 3), count+1, RIGHT)
-        createStates(turn_F(c, 3), count+1, FRONT)
-        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_U(c, 3), count + 1, UP)
+        createStates(turn_D(c, 3), count + 1, DOWN)
+        createStates(turn_R(c, 3), count + 1, RIGHT)
+        createStates(turn_F(c, 3), count + 1, FRONT)
+        createStates(turn_B(c, 3), count + 1, BACK)
         return
 
       case FRONT =>
-        createStates(turn_U(c, 1), count+1, UP)
-        createStates(turn_D(c, 1), count+1, DOWN)
-        createStates(turn_L(c, 1), count+1, LEFT)
-        createStates(turn_R(c, 1), count+1, RIGHT)
-        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_U(c, 1), count + 1, UP)
+        createStates(turn_D(c, 1), count + 1, DOWN)
+        createStates(turn_L(c, 1), count + 1, LEFT)
+        createStates(turn_R(c, 1), count + 1, RIGHT)
+        createStates(turn_B(c, 1), count + 1, BACK)
 
-        createStates(turn_U(c, 2), count+1, UP)
-        createStates(turn_D(c, 2), count+1, DOWN)
-        createStates(turn_L(c, 2), count+1, LEFT)
-        createStates(turn_R(c, 2), count+1, RIGHT)
-        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_U(c, 2), count + 1, UP)
+        createStates(turn_D(c, 2), count + 1, DOWN)
+        createStates(turn_L(c, 2), count + 1, LEFT)
+        createStates(turn_R(c, 2), count + 1, RIGHT)
+        createStates(turn_B(c, 2), count + 1, BACK)
 
-        createStates(turn_U(c, 3), count+1, UP)
-        createStates(turn_D(c, 3), count+1, DOWN)
-        createStates(turn_L(c, 3), count+1, LEFT)
-        createStates(turn_R(c, 3), count+1, RIGHT)
-        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_U(c, 3), count + 1, UP)
+        createStates(turn_D(c, 3), count + 1, DOWN)
+        createStates(turn_L(c, 3), count + 1, LEFT)
+        createStates(turn_R(c, 3), count + 1, RIGHT)
+        createStates(turn_B(c, 3), count + 1, BACK)
         return
 
       case DOWN =>
-//        createStates(turn_U(c, 1), count+1, UP)
-//        createStates(turn_D(c, 1), count+1, DOWN)
-        createStates(turn_L(c, 1), count+1, LEFT)
-        createStates(turn_R(c, 1), count+1, RIGHT)
-        createStates(turn_F(c, 1), count+1, FRONT)
-        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_L(c, 1), count + 1, LEFT)
+        createStates(turn_R(c, 1), count + 1, RIGHT)
+        createStates(turn_F(c, 1), count + 1, FRONT)
+        createStates(turn_B(c, 1), count + 1, BACK)
 
-//        createStates(turn_U(c, 2), count+1, UP)
-//        createStates(turn_D(c, 2), count+1, DOWN)
-        createStates(turn_L(c, 2), count+1, LEFT)
-        createStates(turn_R(c, 2), count+1, RIGHT)
-        createStates(turn_F(c, 2), count+1, FRONT)
-        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_L(c, 2), count + 1, LEFT)
+        createStates(turn_R(c, 2), count + 1, RIGHT)
+        createStates(turn_F(c, 2), count + 1, FRONT)
+        createStates(turn_B(c, 2), count + 1, BACK)
 
-//        createStates(turn_U(c, 3), count+1, UP)
-//        createStates(turn_D(c, 3), count+1, DOWN)
-        createStates(turn_L(c, 3), count+1, LEFT)
-        createStates(turn_R(c, 3), count+1, RIGHT)
-        createStates(turn_F(c, 3), count+1, FRONT)
-        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_L(c, 3), count + 1, LEFT)
+        createStates(turn_R(c, 3), count + 1, RIGHT)
+        createStates(turn_F(c, 3), count + 1, FRONT)
+        createStates(turn_B(c, 3), count + 1, BACK)
         return
 
       case RIGHT =>
-        createStates(turn_U(c, 1), count+1, UP)
-        createStates(turn_D(c, 1), count+1, DOWN)
-//        createStates(turn_L(c, 1), count+1, LEFT)
-//        createStates(turn_R(c, 1), count+1, RIGHT)
-        createStates(turn_F(c, 1), count+1, FRONT)
-        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_U(c, 1), count + 1, UP)
+        createStates(turn_D(c, 1), count + 1, DOWN)
+        createStates(turn_F(c, 1), count + 1, FRONT)
+        createStates(turn_B(c, 1), count + 1, BACK)
 
-        createStates(turn_U(c, 2), count+1, UP)
-        createStates(turn_D(c, 2), count+1, DOWN)
-//        createStates(turn_L(c, 2), count+1, LEFT)
-//        createStates(turn_R(c, 2), count+1, RIGHT)
-        createStates(turn_F(c, 2), count+1, FRONT)
-        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_U(c, 2), count + 1, UP)
+        createStates(turn_D(c, 2), count + 1, DOWN)
+        createStates(turn_F(c, 2), count + 1, FRONT)
+        createStates(turn_B(c, 2), count + 1, BACK)
 
-        createStates(turn_U(c, 3), count+1, UP)
-        createStates(turn_D(c, 3), count+1, DOWN)
-//        createStates(turn_L(c, 3), count+1, LEFT)
-//        createStates(turn_R(c, 3), count+1, RIGHT)
-        createStates(turn_F(c, 3), count+1, FRONT)
-        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_U(c, 3), count + 1, UP)
+        createStates(turn_D(c, 3), count + 1, DOWN)
+        createStates(turn_F(c, 3), count + 1, FRONT)
+        createStates(turn_B(c, 3), count + 1, BACK)
         return
 
       case BACK =>
-        createStates(turn_U(c, 1), count+1, UP)
-        createStates(turn_D(c, 1), count+1, DOWN)
-        createStates(turn_L(c, 1), count+1, LEFT)
-        createStates(turn_R(c, 1), count+1, RIGHT)
-//        createStates(turn_F(c, 1), count+1, FRONT)
-//        createStates(turn_B(c, 1), count+1, BACK)
+        createStates(turn_U(c, 1), count + 1, UP)
+        createStates(turn_D(c, 1), count + 1, DOWN)
+        createStates(turn_L(c, 1), count + 1, LEFT)
+        createStates(turn_R(c, 1), count + 1, RIGHT)
 
-        createStates(turn_U(c, 2), count+1, UP)
-        createStates(turn_D(c, 2), count+1, DOWN)
-        createStates(turn_L(c, 2), count+1, LEFT)
-        createStates(turn_R(c, 2), count+1, RIGHT)
-//        createStates(turn_F(c, 2), count+1, FRONT)
-//        createStates(turn_B(c, 2), count+1, BACK)
+        createStates(turn_U(c, 2), count + 1, UP)
+        createStates(turn_D(c, 2), count + 1, DOWN)
+        createStates(turn_L(c, 2), count + 1, LEFT)
+        createStates(turn_R(c, 2), count + 1, RIGHT)
 
-        createStates(turn_U(c, 3), count+1, UP)
-        createStates(turn_D(c, 3), count+1, DOWN)
-        createStates(turn_L(c, 3), count+1, LEFT)
-        createStates(turn_R(c, 3), count+1, RIGHT)
-//        createStates(turn_F(c, 3), count+1, FRONT)
-//        createStates(turn_B(c, 3), count+1, BACK)
+        createStates(turn_U(c, 3), count + 1, UP)
+        createStates(turn_D(c, 3), count + 1, DOWN)
+        createStates(turn_L(c, 3), count + 1, LEFT)
+        createStates(turn_R(c, 3), count + 1, RIGHT)
         return
     }
   }
 
   /**
-   * Writes each of the HashMaps to a binary file.
+   * Writes each of the hash arrays to a binary file.
    */
   def writeToFile() {
-    var out = new ObjectOutputStream(new FileOutputStream("cornertable.bin"))
-    out.writeObject(cornerHash.values)
+    val out = new DataOutputStream(new FileOutputStream("cornertable.txt"))
+    out.writeByte(cornerHashArray(0)) // NOPE
     out.close()
 
-    out = new ObjectOutputStream(new FileOutputStream("sidetable1.bin"))
-    out.writeObject(side1Hash.values)
-    out.close()
-
-    out = new ObjectOutputStream(new FileOutputStream("sidetable2.bin"))
-    out.writeObject(side2Hash.values)
-    out.close()
+//    val out = new ObjectOutputStream(new FileOutputStream("sidetable1.txt"))
+//    out.writeObject(side1HashArray)
+//    out.close()
+//
+//    val out = new ObjectOutputStream(new FileOutputStream("sidetable2.txt"))
+//    out.writeObject(side2HashArray)
+//    out.close()
   }
 
   def main(args: Array[String]) {
     createStates(solvedCube, 0, NONE)
-    println(cornerHash.values.toList.count(_ == 0))
-    println(cornerHash.values.toList.count(_ == 1))
-    println(cornerHash.values.toList.count(_ == 2))
-    println(cornerHash.values.toList.count(_ == 3))
-    println(cornerHash.values.toList.count(_ == 4))
-    println(cornerHash.values.toList.count(_ == 5))
-    println(cornerHash.values.toList.count(_ == 6))
-    println(cornerHash.values.toList.count(_ == 7))
-    println(cornerHash.values.toList.count(_ == 8))
-    println(cornerHash.values.toList.count(_ == 9))
-    println(cornerHash.values.toList.count(_ == 10))
-    println(cornerHash.values.toList.count(_ == 11))
-//    println(cornerHash.size + ", " + cornerHash.values.toList.count(_ == 1))
-//    println(MAX_GENERATED_CORNER_KEY)
-    println(ZERO + ", " + ONE + ", " + TWO)
+
+    def lambda(n: Int): Int = if (n == 12) 0 else n
+    cornerHashArray.map(lambda(_))
+//    side1HashArray.map(lambda(_))
+//    side2HashArray.map(lambda(_))
+
+//    println(Calendar.getInstance().getTime)
+//    writeToFile()
   }
 }
