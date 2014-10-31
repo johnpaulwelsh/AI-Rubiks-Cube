@@ -137,7 +137,7 @@ object Solve {
    * @return  the turn count retrieved from hashValue's "position" in the table
    */
   def readFromHeuristicTable(hashValue: Int, table: String): Byte = table match {
-    case "corner" => 0
+    case "corner" => 0 // temporarily just suggest 0
     case "sides1" => 0
     case "sides2" => 0
     case _        => 0
@@ -207,12 +207,9 @@ object Solve {
    */
   def search(node: Cube, stepCost: Int, cutoff: Int, output: String): String = {
 
-//    if (output == "O1") println(node.deep sameElements turnCube.deep)
-
-    if (isGoal(node))     {println("goal"); output}
+    if (isGoal(node))     output
     else if (cutoff <= 0) "None"
     else {
-
       // Get the list of successor nodes
       val successors = getSuccessors(node)
 
@@ -223,14 +220,13 @@ object Solve {
 
       var result = "None"
       var idx = 0
+      // temporarily just use all the successor nodes
       while (idx < successors.length) {
-
         if (result == "None") {
           val succ = successors(idx)
-          val currResult = search(succ.state, stepCost+1, cutoff-1, output+succ.fullMove) // THE PROBLEM IS PROBABLY HERE
+          val currResult = search(succ.state, stepCost+1, cutoff-1, output+succ.fullMove)
           if (currResult != "None") result = currResult
         }
-
         idx += 1
       }
 
@@ -267,19 +263,12 @@ object Solve {
       Try(Source.fromFile(filename).getLines().map(x => x.trim()).toArray)
     }
 
-    // O1 (one down turn)
-    val filename = "../../countstates/cube01"
-    // Try: read in the text file, make it a List out of the lines of the file, trim each line, and make it an Array
-    // If it failed, print false, otherwise assign it to a variable
+    val filename = "../../countstates/cube04"
     attemptToReadFile(filename) match {
       case Failure(f)     => println("No file found.")
       case Success(lines) =>
         if (lines.isEmpty) println("Empty file.")
-        else {
-          val cube = arrangeInput(lines)
-
-          println(iterativeDeepening(cube, 2))
-        }
+        else println(iterativeDeepening(arrangeInput(lines), 5))
     }
   }
 }
