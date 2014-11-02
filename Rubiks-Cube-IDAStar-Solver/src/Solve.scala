@@ -1,3 +1,5 @@
+import java.io.{BufferedInputStream, FileInputStream}
+
 import common._
 import scala.io.Source
 import scala.util.{Try, Failure, Success}
@@ -130,20 +132,6 @@ object Solve {
   def isGoal(c: Cube): Boolean = c.deep sameElements solvedCube.deep
 
   /**
-   * Function to read in a value from the given heuristic table.
-   *
-   * @param hashValue  the hash representing the current node's cube state
-   * @param table  a selector for which table we are asking the answer from
-   * @return  the turn count retrieved from hashValue's "position" in the table
-   */
-  def readFromHeuristicTable(hashValue: Int, table: String): Byte = table match {
-    case "corner" => 0 // temporarily just suggest 0
-    case "sides1" => 0
-    case "sides2" => 0
-    case _        => 0
-  }
-
-  /**
    * Function to get the successors of a node in the search. This means we make
    * all 18 kinds of moves to the current node, and put them all in an array.
    *
@@ -177,6 +165,26 @@ object Solve {
   )
 
   /**
+   * Function to read in a value from the given heuristic table.
+   *
+   * http://stackoverflow.com/questions/7598135/how-to-read-a-file-as-a-byte-array-in-scala
+   * http://stackoverflow.com/questions/14533367/reading-4-bit-chunks-from-byte-array
+   *
+   * @param hashValue  the hash representing the current node's cube state
+   * @param table  a selector for which table we are asking the answer from
+   * @return  the turn count retrieved from hashValue's "position" in the table
+   */
+  def readFromHeuristicTable(hashValue: Int, table: String): Byte = {
+    //    val bis: java.io.BufferedInputStream = new BufferedInputStream(new FileInputStream(table))
+    //    val bsArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
+    //
+    //    val pair = bsArray(hashValue/2)
+    //    if (hashValue % 2 == 0) (pair >>> 4).toByte
+    //    else                    (pair & 0x0F).toByte
+    0.toByte
+  }
+
+  /**
    * Function to calculate the h(n), which is the maximum of the three turn counts
    * given back from the heuristic tables.
    *
@@ -187,9 +195,9 @@ object Solve {
     val hc  = doHashCorners(getCubeCornerList(node)) - 1
     val hs1 = doHashSides(getFirstHalfOfCubeSides(node), true) - 1
     val hs2 = doHashSides(getFirstHalfOfCubeSides(node), false) - 1
-    val cornerHeur = readFromHeuristicTable(hc,  "corner")
-    val sides1Heur = readFromHeuristicTable(hs1, "sides1")
-    val sides2Heur = readFromHeuristicTable(hs2, "sides2")
+    val cornerHeur = readFromHeuristicTable(hc,  "cornertable")
+    val sides1Heur = readFromHeuristicTable(hs1, "sidetable1")
+    val sides2Heur = readFromHeuristicTable(hs2, "sidetable2")
 
     List(cornerHeur, sides1Heur, sides2Heur).reduceLeft(_ max _)
   }
@@ -263,12 +271,12 @@ object Solve {
       Try(Source.fromFile(filename).getLines().map(x => x.trim()).toArray)
     }
 
-    val filename = "../../countstates/cube04"
+    val filename = "../../countstates/cube02"
     attemptToReadFile(filename) match {
       case Failure(f)     => println("No file found.")
       case Success(lines) =>
         if (lines.isEmpty) println("Empty file.")
-        else println(iterativeDeepening(arrangeInput(lines), 5))
+        else println(iterativeDeepening(arrangeInput(lines), 15))
     }
   }
 }

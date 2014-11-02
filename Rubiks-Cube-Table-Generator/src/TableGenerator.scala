@@ -21,6 +21,16 @@ import java.io.{DataOutputStream, FileOutputStream}
  */
 object TableGenerator {
 
+  // TODO: Takes too long starting around 6.
+  val MAX_MOVE_COUNT = 4
+
+  /*
+   * Global variables to represent the number of elements the corner table and side table
+   * are expected to have, according to Korf's paper.
+   */
+  val MAX_CORNER_SIZE = 88179840
+  val MAX_SIDE_SIZE = 42577420
+
   /*
    * Global variables to represent the corner and side cubies in an unchanged solved cube.
    * These are instantiated in main and then used in the hash functions.
@@ -38,17 +48,9 @@ object TableGenerator {
    * element array, we can just see if the value we got this time is < 12. This also guarantees that
    * we hold onto the shortest move count to get to any state.
    */
-  var cornerHashArray: Array[Byte] = Array.fill(88179840)(12)
-  val side1HashArray: Array[Byte] = Array.fill(42577420)(12)
-  val side2HashArray: Array[Byte] = Array.fill(42577420)(12)
-
-  /*
-   * Global value for the maximum number of moves that it can take to reach a new state of the cube
-   * (for a subset of cubies, like just the corners, or just half of the sides).
-   *
-   * TODO: Takes too long starting around 6.
-   */
-  val MAX_MOVE_COUNT = 5
+  var cornerHashArray: Array[Byte] = Array.fill(MAX_CORNER_SIZE)(12)
+  val side1HashArray: Array[Byte] = Array.fill(MAX_SIDE_SIZE)(12)
+  val side2HashArray: Array[Byte] = Array.fill(MAX_SIDE_SIZE)(12)
 
   /**
    * Determines whether two cubies match, based solely on contents and not order.
@@ -172,7 +174,7 @@ object TableGenerator {
 //    if (count > MAX_MOVE_COUNT)            return
 //    else if (count >= side1HashArray(hs1)) return
 //    else side1HashArray(hs1) = count.toByte
-//
+
 //    if (count > MAX_MOVE_COUNT)            return
 //    else if (count >= side2HashArray(hs2)) return
 //    else side2HashArray(hs2) = count.toByte
@@ -319,28 +321,31 @@ object TableGenerator {
    * Writes each of the hash arrays to a binary file.
    */
   def writeToFile() {
-    val out = new DataOutputStream(new FileOutputStream("cornertable.txt"))
-    out.writeByte(cornerHashArray(0)) // NOPE
-    out.close()
+    val out = new DataOutputStream(new FileOutputStream("cornertable"))
+    val writtenArray: Array[Byte] = Array.ofDim(MAX_CORNER_SIZE)
 
-//    val out = new ObjectOutputStream(new FileOutputStream("sidetable1.txt"))
-//    out.writeObject(side1HashArray)
-//    out.close()
-//
-//    val out = new ObjectOutputStream(new FileOutputStream("sidetable2.txt"))
-//    out.writeObject(side2HashArray)
-//    out.close()
+    for (i <- 0 until MAX_CORNER_SIZE by 2) {
+      val first = cornerHashArray(i)
+      val second = cornerHashArray(i+1)
+      val combined = (first << 4) | (0xF & second)
+      writtenArray :+ combined.toByte
+    }
+
+    out.writeBytes(writtenArray.mkString)
+    out.close()
   }
 
   def main(args: Array[String]) {
+    // Create the states
     createStates(solvedCube, 0, NONE)
 
-    def lambda(n: Int): Int = if (n == 12) 0 else n
-    cornerHashArray.map(lambda(_))
-//    side1HashArray.map(lambda(_))
-//    side2HashArray.map(lambda(_))
+    // Replace all turn counts that == 12 with 0's because our heuristic always needs to be admissible
+    for (i <- 0 until MAX_CORNER_SIZE) {
+      val currValue = cornerHashArray(i)
+      cornerHashArray(i) = if (currValue == 12) 0.toByte else currValue
+    }
 
-//    println(Calendar.getInstance().getTime)
-//    writeToFile()
+    // Write the turn counts to a file
+    writeToFile()
   }
 }
