@@ -1,3 +1,5 @@
+import java.util.Calendar
+
 import common._
 import MoveEnum._
 import java.io.{DataOutputStream, FileOutputStream}
@@ -17,27 +19,36 @@ import java.io.{DataOutputStream, FileOutputStream}
  * 180 degrees, it does not consist of two separate 90-degree turns. This is to avoid duplicate
  * search tree nodes.
  *
+ * The hashing function is intellectual property of John Sullivan, with assistance by Daniel DeNinno.
+ *
  * @author John Paul Welsh
  */
 object TableGenerator {
 
-  // TODO: Takes too long starting around 6.
-  val MAX_MOVE_COUNT = 4
+  /*
+   * 11 for corners, 10 for sides.
+   *
+   * Making the table for corners (depth 7) and writing it to a file took 40 minutes
+   *
+   */
+  val MAX_MOVE_COUNT = 1
+
+  val BIG_FACTORIAL: Int = 665280 // factorial(12)/factorial(6)
 
   /*
    * Global variables to represent the number of elements the corner table and side table
    * are expected to have, according to Korf's paper.
    */
   val MAX_CORNER_SIZE = 88179840
-  val MAX_SIDE_SIZE = 42577420
+  val MAX_SIDE_SIZE   = 42577420 + 2
 
   /*
-   * Global variables to represent the corner and side cubies in an unchanged solved cube.
-   * These are instantiated in main and then used in the hash functions.
+   * Global variables to represent a solved version of the cube, the corner and
+   * side cubies in an unchanged solved cube.
    */
   val solvedCube: Cube = setSolvedCube()
-  var solvedCornerCubies: Array[Cubie] = getCubeCornerList(solvedCube)
-  var solvedFirstSideCubies: Array[Cubie] = getFirstHalfOfCubeSides(solvedCube)
+  var solvedCornerCubies: Array[Cubie]     = getCubeCornerList(solvedCube)
+  var solvedFirstSideCubies: Array[Cubie]  = getFirstHalfOfCubeSides(solvedCube)
   var solvedSecondSideCubies: Array[Cubie] = getSecondHalfOfCubeSides(solvedCube)
 
   /*
@@ -49,8 +60,8 @@ object TableGenerator {
    * we hold onto the shortest move count to get to any state.
    */
   var cornerHashArray: Array[Byte] = Array.fill(MAX_CORNER_SIZE)(12)
-  val side1HashArray: Array[Byte] = Array.fill(MAX_SIDE_SIZE)(12)
-  val side2HashArray: Array[Byte] = Array.fill(MAX_SIDE_SIZE)(12)
+  val side1HashArray: Array[Byte]  = Array.fill(MAX_SIDE_SIZE)(12)
+  val side2HashArray: Array[Byte]  = Array.fill(MAX_SIDE_SIZE)(12)
 
   /**
    * Determines whether two cubies match, based solely on contents and not order.
@@ -84,6 +95,16 @@ object TableGenerator {
     accum
   }
 
+  // TODO: FIX THIS SHIT
+  def getCubieIndicesForSides(start: Int, finish: Int, seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
+    for (i <- 0 until seqSolved.length) {
+      for (j <- start to finish) {
+        if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
+      }
+    }
+    accum
+  }
+
   /**
    * Hashing function for corner cubies. Generates a unique Integer to represent the state of the cube,
    * in regards to the cubies being looked at.
@@ -97,7 +118,7 @@ object TableGenerator {
     def accumulate(actualCubies: Array[Cubie], crnrIndices: Array[Int], fact: Int, accum: Int): Int = {
       if (fact < 0) accum
       else {
-        // the value between 0 to length-1 that this # in cbs currently has (after shifting)
+        // the value between 0 to length-1 that this # in actualCubies currently has (after shifting)
         val idx = cornerVals.indexOf(crnrIndices.head)
         // Can be 0, 1, or 2  (actualCubies is getting smaller each time, cubiesList is not)
         val orient = getCornerParity(actualCubies.head, cubiesList)
@@ -128,31 +149,33 @@ object TableGenerator {
   def doHashSides(cubiesList: Array[Cubie], isFirst6Cubies: Boolean): Int = {
     var sideVals = (0 to 11).toArray
 
-    def accumulate(cbs: Array[Int], fact: Int, accum: Int): Int = {
+    def accumulate(actualCubies: Array[Cubie], sideIndices: Array[Int], fact: Int, accum: Int): Int = {
       if (fact < 6) accum
       else {
+
         // the value between 0 to length-1 that this # in cbs currently has (after shifting)
-        val idx = sideVals.indexOf(cbs.head)
+        val idx = sideVals.indexOf(sideIndices.head)
+
         // Can be 0 or 1
-        val orient = getSideParity(cubiesList.head)
-        // The math! --- (fact! * "points") + ( 2^(fact-1) * orient * 12!/6! )
-        val newAccum = {
-          if (fact > 0) (factorial(fact) * idx) + (Math.pow(2, fact - 1).toInt * orient * (factorial(12) / factorial(6)))
-          else factorial(12)
-        }
+        val orient = getSideParity(actualCubies.head)
+        // The math! --- ( (fact! * "points") / 6! ) + ( 2^(fact-6) * orient * 12!/6! )
+        val newAccum = ( (factorial(fact) * idx) / factorial(6) ) + (Math.pow(2, fact-6).toInt * orient * BIG_FACTORIAL )
         // remove idx from values and shift everything down
         sideVals = sideVals.take(idx) ++ sideVals.drop(idx+1)
 
-        accumulate(cbs.tail, fact-1, accum + newAccum)
+        accumulate(actualCubies.tail, sideIndices.tail, fact-1, accum + newAccum)
       }
     }
 
+    // TODO: THIS IS BORKED TOO, PROBABLY
     val sideIndices = {
-      if (isFirst6Cubies) getCubieIndices(cubiesList, solvedFirstSideCubies, Array.ofDim(6))
-      else getCubieIndices(cubiesList, solvedSecondSideCubies, Array.ofDim(6))
+      if (isFirst6Cubies) getCubieIndicesForSides(0, 5, cubiesList, solvedFirstSideCubies, Array.ofDim(6))
+      else                getCubieIndicesForSides(6, 11, cubiesList, solvedSecondSideCubies, Array.ofDim(6))
     }
-    // Must divide by 6! at the end!
-    accumulate(sideIndices, 11, 0) / factorial(6)
+
+    println(sideIndices.deep)
+
+    accumulate(cubiesList, sideIndices, 11, 0)
   }
 
   /**
@@ -163,17 +186,17 @@ object TableGenerator {
    */
   def createStates(c: Cube, count: Int, lastMove: Move) {
 
-    val hc = doHashCorners(getCubeCornerList(c)) - 1
-//    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true) - 1
+//    val hc = doHashCorners(getCubeCornerList(c)) - 1
+    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true) // NO MINUS 1 HERE, AND I ADDED TWO TO THE LENGTH OF THE ARRAY
 //    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false) - 1
 
-    if (count > MAX_MOVE_COUNT)            return
-    else if (count >= cornerHashArray(hc)) return
-    else cornerHashArray(hc) = count.toByte
-
 //    if (count > MAX_MOVE_COUNT)            return
-//    else if (count >= side1HashArray(hs1)) return
-//    else side1HashArray(hs1) = count.toByte
+//    else if (count >= cornerHashArray(hc)) return
+//    else cornerHashArray(hc) = count.toByte
+
+    if (count > MAX_MOVE_COUNT)            return
+    else if (count >= side1HashArray(hs1)) return
+    else side1HashArray(hs1) = count.toByte
 
 //    if (count > MAX_MOVE_COUNT)            return
 //    else if (count >= side2HashArray(hs2)) return
@@ -321,29 +344,36 @@ object TableGenerator {
    * Writes each of the hash arrays to a binary file.
    */
   def writeToFile() {
-    val out = new DataOutputStream(new FileOutputStream("cornertable"))
-    val writtenArray: Array[Byte] = Array.ofDim(MAX_CORNER_SIZE)
+    val out = new DataOutputStream(new FileOutputStream("sidetable1"))
+    val writtenArray: Array[Byte] = Array.ofDim(MAX_SIDE_SIZE/2)
 
-    for (i <- 0 until MAX_CORNER_SIZE by 2) {
-      val first = cornerHashArray(i)
-      val second = cornerHashArray(i+1)
+    var writtenIdx = 0
+    for (i <- 0 until MAX_SIDE_SIZE/2 by 2) {
+      val first = side1HashArray(i)
+      val second = side1HashArray(i+1)
       val combined = (first << 4) | (0xF & second)
-      writtenArray :+ combined.toByte
+      writtenArray(writtenIdx) = combined.toByte
+      writtenIdx += 1
     }
+    println("done combining : " + Calendar.getInstance().getTime)
 
     out.writeBytes(writtenArray.mkString)
     out.close()
+    println("done writing   : " + Calendar.getInstance().getTime)
   }
 
   def main(args: Array[String]) {
+    println("Start searching: " + Calendar.getInstance().getTime)
     // Create the states
     createStates(solvedCube, 0, NONE)
 
     // Replace all turn counts that == 12 with 0's because our heuristic always needs to be admissible
-    for (i <- 0 until MAX_CORNER_SIZE) {
-      val currValue = cornerHashArray(i)
-      cornerHashArray(i) = if (currValue == 12) 0.toByte else currValue
+    for (i <- 0 until MAX_SIDE_SIZE) {
+      val currValue = side1HashArray(i)
+      side1HashArray(i) = if (currValue == 12) 0.toByte else currValue
     }
+
+    println("Done searching : " + Calendar.getInstance().getTime)
 
     // Write the turn counts to a file
     writeToFile()

@@ -103,11 +103,8 @@ object Solve {
         val idx = sideVals.indexOf(cbs.head)
         // Can be 0 or 1
         val orient = getSideParity(cubiesList.head)
-        // The math! --- (fact! * "points") + ( 2^(fact-1) * orient * 12!/6! )
-        val newAccum = {
-          if (fact > 0) (factorial(fact) * idx) + (Math.pow(2, fact - 1).toInt * orient * (factorial(12) / factorial(6)))
-          else factorial(12)
-        }
+        // The math! --- ( (fact! * "points") / 6! ) + ( 2^(fact-6) * orient * 12!/6! )
+        val newAccum = ( (factorial(fact) * idx) / factorial(6) ) + (Math.pow(2, fact-6).toInt * orient * (factorial(12)/factorial(6))  )
         // remove idx from values and shift everything down
         sideVals = sideVals.take(idx) ++ sideVals.drop(idx+1)
 
@@ -120,7 +117,7 @@ object Solve {
       else getCubieIndices(cubiesList, solvedSecondSideCubies, Array.ofDim(6))
     }
     // Must divide by 6! at the end!
-    accumulate(sideIndices, 11, 0) / factorial(6)
+    accumulate(sideIndices, 11, 0)
   }
 
   /**
@@ -222,16 +219,22 @@ object Solve {
       val successors = getSuccessors(node)
 
       // Find all of the successors with the lowest heuristic value
-      val bestSuccessors: Array[CubeState] = Array()
+      var lowestHeur = 12
+      for (succ <- successors) {
+        val heur = succ.heuristic
+        if (heur < lowestHeur) lowestHeur = heur
+      }
+
+      val bestSuccessors = successors.filter(x => x.heuristic == lowestHeur)
+
       // Find the lowest heuristic by going through the array
       // Filter the array to only include the ones with that heuristic value
 
       var result = "None"
       var idx = 0
-      // temporarily just use all the successor nodes
-      while (idx < successors.length) {
+      while (idx < bestSuccessors.length) {
         if (result == "None") {
-          val succ = successors(idx)
+          val succ = bestSuccessors(idx)
           val currResult = search(succ.state, stepCost+1, cutoff-1, output+succ.fullMove)
           if (currResult != "None") result = currResult
         }
@@ -262,7 +265,8 @@ object Solve {
   }
 
   /**
-   * The main function for this program.
+   * The main function for this program. Reads input from a file, validates the
+   * input as a solvable Rubik's Cube, and solves it using IDA*.
    *
    * @param args  command line arguments
    */
@@ -271,12 +275,17 @@ object Solve {
       Try(Source.fromFile(filename).getLines().map(x => x.trim()).toArray)
     }
 
-    val filename = "../../countstates/cube02"
+    //val filename = "../../countstates/cube04"
+    val filename = args(0)
     attemptToReadFile(filename) match {
       case Failure(f)     => println("No file found.")
       case Success(lines) =>
+        val cube = arrangeInput(lines)
+        val isValid = CubeValidator.isValidCube(lines, cube, solvedCube)
+
         if (lines.isEmpty) println("Empty file.")
-        else println(iterativeDeepening(arrangeInput(lines), 15))
+        else if (!isValid) println("Invalid cube.")
+        else               println(iterativeDeepening(cube, 15))
     }
   }
 }
