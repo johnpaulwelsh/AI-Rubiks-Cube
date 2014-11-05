@@ -8,6 +8,81 @@ import common._
 object CubeValidator {
 
   /**
+   * Determines whether two cubies match, based solely on contents and not order.
+   * Used in permutation test and side test.
+   */
+  def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
+    if (solved.isEmpty) true
+    else if (!input.deep.contains(solved.head)) false
+    else matchingCubies(input, solved.tail)
+  }
+
+  /**
+   * Maps the location that a cubie is (in seqNow) to the location
+   * it ought to be (gotten from seqSolved).
+   *
+   * @param seqNow     the sequence of cubies from the input
+   * @param seqSolved  the sequence of cubies in the solved state
+   * @param accum      an array showing, for each element in seqNow, what element
+   *                   it belongs to in the solved state
+   * @return  the accumulated array of position indicies
+   */
+  def getCubieIndices(seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
+
+    for (i <- 0 until seqSolved.length) {
+      for (j <- 0 until seqNow.length) {
+        if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
+      }
+    }
+    accum
+  }
+
+  /**
+   * Gets the parity of a side Cubie.
+   *
+   * The 5 rules that this test follows are listed in comments inside this function.
+   *
+   * @param c  the input Cubie
+   * @return  the parity value for the Cubie
+   */
+  def getSideParity(c: Cubie): Int = {
+
+    // Only for cubies in the top or bottom layers
+    if (c(1) != 'x') {
+
+      // Rule 1: if the y-axis is R or O, we're good. All we need to do to get the Cubie in its right position
+      //         (so also taking into account the other color on the Cubie) is spin the top or bottom face. Since
+      //         it only takes spins on L, R, U, or D (here, only on U or D), then the parity is 0.
+      if (c(1) == 'R' || c(1) == 'O') 0
+
+      // Rule 2: if the the x- or z-axis is R or O, we're bad. You can't get it home without using an F or B move.
+      else if (c(0) == 'R' || c(0) == 'O') 1
+      else if (c(2) == 'R' || c(2) == 'O') 1
+
+      // Rule 3a: it is bad if it has Y or W facing the sides. They require at least one F or B to fix.
+      // Rule 3b: it is good if it has B or G facing the sides.
+      else if (c(0) == 'Y' || c(0) == 'W' || c(2) == 'Y' || c(2) == 'W') 1
+      else if (c(0) == 'B' || c(0) == 'G' || c(2) == 'B' || c(2) == 'G') 0
+
+      else 0
+
+      // Only for cubies in the middle layer
+    } else {
+      // Rule 4a: if it has R or O facing front or back, then we're good.
+      // Rule 4b: if it has R or O facing left or right, then we're bad.
+      if      (c(2) == 'R' || c(2) == 'O') 0
+      else if (c(0) == 'R' || c(0) == 'O') 1
+
+      // Rule 5a: if it has W or Y facing front or back, then we're good.
+      // Rule 5b: if it has W or Y facing left or right, then we're bad.
+      else if (c(2) == 'W' || c(2) == 'Y') 0
+      else if (c(0) == 'W' || c(0) == 'Y') 1
+
+      else 0
+    }
+  }
+
+  /**
    * The primary function to check the three parity checks against the input.
    *
    * @param input   the cube we are checking for validity
@@ -64,36 +139,6 @@ object CubeValidator {
         }
       }
       count
-    }
-
-    /**
-     * Determines whether two cubies match, based solely on contents and not order.
-     * Used in permutation test and side test.
-     */
-    def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
-      if (solved.isEmpty) true
-      else if (!input.deep.contains(solved.head)) false
-      else matchingCubies(input, solved.tail)
-    }
-
-    /**
-     * Maps the location that a cubie is (in seqNow) to the location
-     * it ought to be (gotten from seqSolved).
-     *
-     * @param seqNow     the sequence of cubies from the input
-     * @param seqSolved  the sequence of cubies in the solved state
-     * @param accum      an array showing, for each element in seqNow, what element
-     *                   it belongs to in the solved state
-     * @return  the accumulated array of position indicies
-     */
-    def getCubieIndices(seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
-
-      for (i <- 0 until seqSolved.length) {
-        for (j <- 0 until seqNow.length) {
-          if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
-        }
-      }
-      accum
     }
 
     /**
@@ -186,51 +231,6 @@ object CubeValidator {
 
       // Returns whether the total parity is divisible by 3
       totalCornerParity % 3 == 0
-    }
-
-    /**
-     * Gets the parity of a side Cubie.
-     *
-     * The 5 rules that this test follows are listed in comments inside this function.
-     *
-     * @param c  the input Cubie
-     * @return  the parity value for the Cubie
-     */
-    def getSideParity(c: Cubie): Int = {
-
-      // Only for cubies in the top or bottom layers
-      if (c(1) != 'x') {
-
-        // Rule 1: if the y-axis is R or O, we're good. All we need to do to get the Cubie in its right position
-        //         (so also taking into account the other color on the Cubie) is spin the top or bottom face. Since
-        //         it only takes spins on L, R, U, or D (here, only on U or D), then the parity is 0.
-        if (c(1) == 'R' || c(1) == 'O') 0
-
-        // Rule 2: if the the x- or z-axis is R or O, we're bad. You can't get it home without using an F or B move.
-        else if (c(0) == 'R' || c(0) == 'O') 1
-        else if (c(2) == 'R' || c(2) == 'O') 1
-
-        // Rule 3a: it is bad if it has Y or W facing the sides. They require at least one F or B to fix.
-        // Rule 3b: it is good if it has B or G facing the sides.
-        else if (c(0) == 'Y' || c(0) == 'W' || c(2) == 'Y' || c(2) == 'W') 1
-        else if (c(0) == 'B' || c(0) == 'G' || c(2) == 'B' || c(2) == 'G') 0
-
-        else 0
-
-      // Only for cubies in the middle layer
-      } else {
-        // Rule 4a: if it has R or O facing front or back, then we're good.
-        // Rule 4b: if it has R or O facing left or right, then we're bad.
-        if      (c(2) == 'R' || c(2) == 'O') 0
-        else if (c(0) == 'R' || c(0) == 'O') 1
-
-        // Rule 5a: if it has W or Y facing front or back, then we're good.
-        // Rule 5b: if it has W or Y facing left or right, then we're bad.
-        else if (c(2) == 'W' || c(2) == 'Y') 0
-        else if (c(0) == 'W' || c(0) == 'Y') 1
-
-        else 0
-      }
     }
 
     /**

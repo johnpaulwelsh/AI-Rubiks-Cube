@@ -396,7 +396,7 @@ object common {
    */
   def turn_B(cube: Cube, turn: Int): Cube = {
 
-    var tempcube = cube.clone()
+    val tempcube = cube.clone()
 
     def orient(cubie: Cubie): Cubie = Array(cubie(1), cubie(0), cubie(2))
 

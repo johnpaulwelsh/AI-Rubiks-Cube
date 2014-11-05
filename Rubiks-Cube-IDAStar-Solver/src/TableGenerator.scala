@@ -1,5 +1,3 @@
-import java.util.Calendar
-
 import common._
 import MoveEnum._
 import java.io.{DataOutputStream, FileOutputStream}
@@ -27,10 +25,6 @@ object TableGenerator {
 
   /*
    * 11 for corners, 10 for sides.
-   *
-   * Making the table for corners (depth 7) and writing it to a file took 40 minutes
-   * Making the table for sides1 (depth 7) and writing it to a file took __ minutes
-   *
    */
   val MAX_MOVE_COUNT = 7
 
@@ -59,22 +53,9 @@ object TableGenerator {
    * element array, we can just see if the value we got this time is < 12. This also guarantees that
    * we hold onto the shortest move count to get to any state.
    */
-//  var cornerHashArray: Array[Byte] = Array.fill(MAX_CORNER_SIZE)(12)
-  val side1HashArray: Array[Byte]  = Array.fill(MAX_SIDE_SIZE)(12)
+  var cornerHashArray: Array[Byte] = Array.fill(MAX_CORNER_SIZE)(12)
+//  val side1HashArray: Array[Byte]  = Array.fill(MAX_SIDE_SIZE)(12)
 //  val side2HashArray: Array[Byte]  = Array.fill(MAX_SIDE_SIZE)(12)
-
-  /**
-   * Determines whether two cubies match, based solely on contents and not order.
-   *
-   * @param input   The Cubie in question
-   * @param solved  The Cubie from the solved state
-   * @return  true if the Cubies match (regardless of orientation), false otherwise
-   */
-  def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
-    if (solved.isEmpty) true
-    else if (!input.deep.contains(solved.head)) false
-    else matchingCubies(input, solved.tail)
-  }
 
   /**
    * Maps the location that a cubie is (in seqNow) to the location
@@ -89,7 +70,7 @@ object TableGenerator {
   def getCubieIndicesForCorners(seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
     for (i <- 0 until seqSolved.length) {
       for (j <- 0 until seqNow.length) {
-        if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
+        if (CubeValidator.matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
       }
     }
     accum
@@ -108,7 +89,7 @@ object TableGenerator {
   def getCubieIndicesForSides(isFirst6: Boolean, seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
     for (i <- 0 until seqSolved.length) {
       for (j <- 0 until seqNow.length) {
-        if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
+        if (CubeValidator.matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
       }
     }
     if (isFirst6) accum.take(6) else accum.drop(6)
@@ -122,6 +103,9 @@ object TableGenerator {
    * @return  a hash value for this state
    */
   def doHashCorners(cubiesList: Array[Cubie]): Int = {
+
+    // TODO: Turns out, this isn't working either. It's close though.
+
     var cornerVals = (0 to 7).toArray
 
     def accumulate(actualCubies: Array[Cubie], crnrIndices: Array[Int], fact: Int, accum: Int): Int = {
@@ -156,6 +140,9 @@ object TableGenerator {
    * @return  a hash value for this state
    */
   def doHashSides(cubiesList: Array[Cubie], isFirst6Cubies: Boolean): Int = {
+
+    // TODO: This isn't working.
+
     var sideVals = (0 to 11).toArray
 
     def accumulate(actualCubies: Array[Cubie], sideIndices: Array[Int], fact: Int, accum: Int): Int = {
@@ -188,17 +175,17 @@ object TableGenerator {
    */
   def createStates(c: Cube, count: Int, lastMove: Move) {
 
-//    val hc = doHashCorners(getCubeCornerList(c)) - 1
-    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true) // NO MINUS 1 HERE, AND I ADDED TWO TO THE LENGTH OF THE ARRAY
-//    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false) - 1
-
-//    if (count > MAX_MOVE_COUNT)            return
-//    else if (count >= cornerHashArray(hc)) return
-//    else cornerHashArray(hc) = count.toByte
+    val hc = doHashCorners(getCubeCornerList(c)) - 1
+//    val hs1 = doHashSides(getFirstHalfOfCubeSides(c), true)
+//    val hs2 = doHashSides(getSecondHalfOfCubeSides(c), false)
 
     if (count > MAX_MOVE_COUNT)            return
-    else if (count >= side1HashArray(hs1)) return
-    else side1HashArray(hs1) = count.toByte
+    else if (count >= cornerHashArray(hc)) return
+    else cornerHashArray(hc) = count.toByte
+
+//    if (count > MAX_MOVE_COUNT)            return
+//    else if (count >= side1HashArray(hs1)) return
+//    else side1HashArray(hs1) = count.toByte
 
 //    if (count > MAX_MOVE_COUNT)            return
 //    else if (count >= side2HashArray(hs2)) return
@@ -346,38 +333,30 @@ object TableGenerator {
    * Writes each of the hash arrays to a binary file.
    */
   def writeToFile() {
-    val out = new DataOutputStream(new FileOutputStream("sidetable1"))
-    val writtenArray: Array[Byte] = Array.ofDim(MAX_SIDE_SIZE/2)
+    val out = new DataOutputStream(new FileOutputStream("cornertable"))
+    val writtenArray: Array[Byte] = Array.ofDim(MAX_CORNER_SIZE/2)
 
     var writtenIdx = 0
-    for (i <- 0 until MAX_SIDE_SIZE/2 by 2) {
-      val first = side1HashArray(i)
-      val second = side1HashArray(i+1)
+    for (i <- 0 until MAX_CORNER_SIZE/2 by 2) {
+      val first = cornerHashArray(i)
+      val second = cornerHashArray(i+1)
       val combined = (first << 4) | (0xF & second)
       writtenArray(writtenIdx) = combined.toByte
       writtenIdx += 1
     }
-    println("done combining : " + Calendar.getInstance().getTime)
 
     out.writeBytes(writtenArray.mkString)
-    out.close()
-    println("done writing   : " + Calendar.getInstance().getTime)
   }
 
   def main(args: Array[String]) {
-    println("Start searching: " + Calendar.getInstance().getTime)
-    // Create the states
     createStates(solvedCube, 0, NONE)
 
     // Replace all turn counts that == 12 with 0's because our heuristic always needs to be admissible
     for (i <- 0 until MAX_SIDE_SIZE) {
-      val currValue = side1HashArray(i)
-      side1HashArray(i) = if (currValue == 12) 0.toByte else currValue
+      val currValue = cornerHashArray(i)
+      cornerHashArray(i) = if (currValue == 12) 0.toByte else currValue
     }
 
-    println("Done searching : " + Calendar.getInstance().getTime)
-
-    // Write the turn counts to a file
     writeToFile()
   }
 }

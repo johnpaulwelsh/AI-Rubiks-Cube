@@ -1,8 +1,7 @@
-import java.io.{BufferedInputStream, FileInputStream}
-
 import common._
 import scala.io.Source
 import scala.util.{Try, Failure, Success}
+import java.io.RandomAccessFile
 
 /**
  * Solver for a Rubik's Cube, using pre-generated tables and
@@ -17,108 +16,6 @@ object Solve {
   var solvedCornerCubies: Array[Cubie]     = getCubeCornerList(solvedCube)
   var solvedFirstSideCubies: Array[Cubie]  = getFirstHalfOfCubeSides(solvedCube)
   var solvedSecondSideCubies: Array[Cubie] = getSecondHalfOfCubeSides(solvedCube)
-
-  var turnCube: Cube = null
-
-  /**
-   * Determines whether two cubies match, based solely on contents and not order.
-   *
-   * @param input   The Cubie in question
-   * @param solved  The Cubie from the solved state
-   * @return  true if the Cubies match (regardless of orientation), false otherwise
-   */
-  def matchingCubies(input: Cubie, solved: Cubie): Boolean = {
-    if (solved.isEmpty) true
-    else if (!input.deep.contains(solved.head)) false
-    else matchingCubies(input, solved.tail)
-  }
-
-  /**
-   * Maps the location that a cubie is (in seqNow) to the location
-   * it ought to be (gotten from seqSolved).
-   *
-   * @param seqNow     the sequence of cubies from the input
-   * @param seqSolved  the sequence of cubies in the solved state
-   * @param accum      an array showing, for each element in seqNow, what element
-   *                   it belongs to in the solved state
-   * @return  the accumulated array of position indicies
-   */
-  def getCubieIndices(seqNow: Array[Cubie], seqSolved: Array[Cubie], accum: Array[Int]): Array[Int] = {
-    for (i <- 0 until seqSolved.length) {
-      for (j <- 0 until seqNow.length) {
-        if (matchingCubies(seqSolved(i), seqNow(j))) accum(j) = i
-      }
-    }
-    accum
-  }
-
-  /**
-   * Hashing function for corner cubies. Generates a unique Integer to represent the state of the cube,
-   * in regards to the cubies being looked at.
-   *
-   * @param cubiesList  the cubies in question, used to determine what constitutes a cube state
-   * @return  a hash value for this state
-   */
-  def doHashCorners(cubiesList: Array[Cubie]): Int = {
-    var cornerVals = (0 to 7).toArray
-
-    def accumulate(actualCubies: Array[Cubie], crnrIndices: Array[Int], fact: Int, accum: Int): Int = {
-      if (fact < 0) accum
-      else {
-        // the value between 0 to length-1 that this # in cbs currently has (after shifting)
-        val idx = cornerVals.indexOf(crnrIndices.head)
-        // Can be 0, 1, or 2  (actualCubies is getting smaller each time, cubiesList is not)
-        val orient = getCornerParity(actualCubies.head, cubiesList)
-        // The math! --- (fact! * "points") + ( 3^(fact-1) * orient * 8! )
-        val newAccum = {
-          if (fact > 0) (factorial(fact) * idx) + (Math.pow(3, fact-1).toInt * orient * factorial(8))
-          else factorial(fact)
-        }
-        // Remove idx from values and shift everything down
-        cornerVals = cornerVals.take(idx) ++ cornerVals.drop(idx+1)
-
-        accumulate(actualCubies.tail, crnrIndices.tail, fact-1, accum + newAccum)
-      }
-    }
-
-    val cornerIndices = getCubieIndices(cubiesList, solvedCornerCubies, Array.ofDim(8))
-    accumulate(cubiesList, cornerIndices, 7, 0)
-  }
-
-  /**
-   * Hashing function for side cubies. Generates a unique Integer to represent the state of the cube,
-   * in regards to the cubies being looked at.
-   *
-   * @param cubiesList      the cubies in question, used to determine what constitutes a cube state
-   * @param isFirst6Cubies  determines which half of the side cubies we are working with
-   * @return  a hash value for this state
-   */
-  def doHashSides(cubiesList: Array[Cubie], isFirst6Cubies: Boolean): Int = {
-    var sideVals = (0 to 11).toArray
-
-    def accumulate(cbs: Array[Int], fact: Int, accum: Int): Int = {
-      if (fact < 6) accum
-      else {
-        // the value between 0 to length-1 that this # in cbs currently has (after shifting)
-        val idx = sideVals.indexOf(cbs.head)
-        // Can be 0 or 1
-        val orient = getSideParity(cubiesList.head)
-        // The math! --- ( (fact! * "points") / 6! ) + ( 2^(fact-6) * orient * 12!/6! )
-        val newAccum = ( (factorial(fact) * idx) / factorial(6) ) + (Math.pow(2, fact-6).toInt * orient * (factorial(12)/factorial(6))  )
-        // remove idx from values and shift everything down
-        sideVals = sideVals.take(idx) ++ sideVals.drop(idx+1)
-
-        accumulate(cbs.tail, fact-1, accum + newAccum)
-      }
-    }
-
-    val sideIndices = {
-      if (isFirst6Cubies) getCubieIndices(cubiesList, solvedFirstSideCubies, Array.ofDim(6))
-      else getCubieIndices(cubiesList, solvedSecondSideCubies, Array.ofDim(6))
-    }
-    // Must divide by 6! at the end!
-    accumulate(sideIndices, 11, 0)
-  }
 
   /**
    * Goal test: determines whether the given state of the cube is solved.
@@ -172,13 +69,19 @@ object Solve {
    * @return  the turn count retrieved from hashValue's "position" in the table
    */
   def readFromHeuristicTable(hashValue: Int, table: String): Byte = {
-    //    val bis: java.io.BufferedInputStream = new BufferedInputStream(new FileInputStream(table))
-    //    val bsArray = Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
-    //
-    //    val pair = bsArray(hashValue/2)
-    //    if (hashValue % 2 == 0) (pair >>> 4).toByte
-    //    else                    (pair & 0x0F).toByte
-    0.toByte
+
+    def attemptToReadHeuristicFile(file: String): Try[RandomAccessFile] = {
+      Try(new RandomAccessFile(file, "r"))
+    }
+
+    attemptToReadHeuristicFile(table) match {
+      case Failure(f)   => 0
+      case Success(raf) =>
+        raf.seek(hashValue/2)
+        val pair = raf.readByte()
+        if (hashValue % 2 == 0) (pair >>> 4).toByte
+        else                    (pair & 0x0F).toByte
+    }
   }
 
   /**
@@ -189,12 +92,16 @@ object Solve {
    * @return  the maximum number of moves gotten from the tables
    */
   def calculateHeuristic(node: Cube): Byte = {
-    val hc  = doHashCorners(getCubeCornerList(node)) - 1
-    val hs1 = doHashSides(getFirstHalfOfCubeSides(node), true) - 1
-    val hs2 = doHashSides(getFirstHalfOfCubeSides(node), false) - 1
+    val hc = TableGenerator.doHashCorners(getCubeCornerList(node)) - 1
     val cornerHeur = readFromHeuristicTable(hc,  "cornertable")
-    val sides1Heur = readFromHeuristicTable(hs1, "sidetable1")
-    val sides2Heur = readFromHeuristicTable(hs2, "sidetable2")
+
+    //val hs1 = doHashSides(getFirstHalfOfCubeSides(node), true) - 1
+    //val sides1Heur = readFromHeuristicTable(hs1, "sidetable1")
+    val sides1Heur = 0.toByte
+
+    //val hs2 = doHashSides(getFirstHalfOfCubeSides(node), false) - 1
+    //val sides2Heur = readFromHeuristicTable(hs2, "sidetable2")
+    val sides2Heur = 0.toByte
 
     List(cornerHeur, sides1Heur, sides2Heur).reduceLeft(_ max _)
   }
@@ -206,36 +113,23 @@ object Solve {
    *
    * @param node      the current state of the cube
    * @param stepCost  the number of moves taken to get to this point
-   * @param cutoff    the number of moves at which we will stop searching for a solution
    * @param output    the final output, to which we will add the next move we choose to make
    * @return  the output for this search (either a solution path or a blank string)
    */
-  def search(node: Cube, stepCost: Int, cutoff: Int, output: String): String = {
+  def search(node: CubeState, stepCost: Int, maxDepth: Int, output: String): String = {
 
-    if (isGoal(node))     output
-    else if (cutoff <= 0) "None"
+    if (isGoal(node.state)) output
+    else if (stepCost > maxDepth) "None"
     else {
       // Get the list of successor nodes
-      val successors = getSuccessors(node)
-
-      // Find all of the successors with the lowest heuristic value
-      var lowestHeur = 12
-      for (succ <- successors) {
-        val heur = succ.heuristic
-        if (heur < lowestHeur) lowestHeur = heur
-      }
-
-      val bestSuccessors = successors.filter(x => x.heuristic == lowestHeur)
-
-      // Find the lowest heuristic by going through the array
-      // Filter the array to only include the ones with that heuristic value
+      val successors = getSuccessors(node.state)
 
       var result = "None"
       var idx = 0
-      while (idx < bestSuccessors.length) {
+      while (idx < successors.length) {
         if (result == "None") {
-          val succ = bestSuccessors(idx)
-          val currResult = search(succ.state, stepCost+1, cutoff-1, output+succ.fullMove)
+          val succ = successors(idx)
+          val currResult = search(succ, stepCost+1, maxDepth, output+succ.fullMove)
           if (currResult != "None") result = currResult
         }
         idx += 1
@@ -258,7 +152,7 @@ object Solve {
     def loop(d: Int, output: String): String = {
       if (output != "None") output
       else if (d > depth)   "None"
-      else                  loop(d+1, search(initial, 0, d, ""))
+      else                  loop(d+1, search(new CubeState(initial, "x", 0), 0, d, ""))
     }
 
     loop(0, "None")
@@ -271,11 +165,11 @@ object Solve {
    * @param args  command line arguments
    */
   def main(args: Array[String]) {
+
     def attemptToReadFile(filename: String): Try[Array[String]] = {
       Try(Source.fromFile(filename).getLines().map(x => x.trim()).toArray)
     }
 
-    //val filename = "../../countstates/cube04"
     val filename = args(0)
     attemptToReadFile(filename) match {
       case Failure(f)     => println("No file found.")
@@ -285,7 +179,7 @@ object Solve {
 
         if (lines.isEmpty) println("Empty file.")
         else if (!isValid) println("Invalid cube.")
-        else               println(iterativeDeepening(cube, 15))
+        else               println(iterativeDeepening(cube, 20))
     }
   }
 }
